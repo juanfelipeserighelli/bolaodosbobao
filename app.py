@@ -371,18 +371,32 @@ api_data = obter_resultados_reais_api()
 # ==============================================================================
 # 5. HEADER & ÁREA DE SELEÇÃO DE USUÁRIO
 # ==============================================================================
-# ==============================================================================
 st.markdown("🏆 BOLÃO DO BOBÃO COPA DO MUNDO 2026")                     
 usuario_atual = st.selectbox("👤 Identifique-se para palpitar ou visualizar:", AMIGOS)
 
-# 🛡️ TRAVA DE SEGURANÇA MÁXIMA (Força a criação do banco se o Streamlit falhar)
-if "banco_palpites" not in st.session_state:
-    st.session_state.banco_palpites = carregar_dados()
+# 🛡️ FUNÇÃO DE EMERGÊNCIA (Garante a estrutura básica se tudo falhar)
+def criar_banco_emergencia():
+    banco = {}
+    for amigo in AMIGOS:
+        banco[amigo] = {
+            "travado": False,
+            "classificacao": {g: list(teams) for g, teams in GRUPOS_CONFIG.items()} if "GRUPOS_CONFIG" in globals() else {},
+            "placar_brasil": [0, 0, 0, 0, 0, 0],
+            "vencedores_mata_mata": {}
+        }
+    return banco
 
-# Se mesmo após carregar os dados, o amigo selecionado não existir na memória (Anti-KeyError):
+# 🛡️ TRAVA DE SEGURANÇA MÁXIMA
+if "banco_palpites" not in st.session_state:
+    try:
+        st.session_state.banco_palpites = carregar_dados()
+    except:
+        st.session_state.banco_palpites = criar_banco_emergencia()
+
+# Se mesmo após carregar os dados, o amigo selecionado não existir na memória:
 if usuario_atual not in st.session_state.banco_palpites:
     st.warning("⚠️ Reconstruindo base de dados corrompida. Aguarde...")
-    banco_emergencia = obter_banco_padrao()
+    banco_emergencia = criar_banco_emergencia()
     
     # Mescla o banco de emergência mantendo o que já existia
     for amigo in AMIGOS:
