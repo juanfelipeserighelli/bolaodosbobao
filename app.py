@@ -492,7 +492,7 @@ def obter_resultados():
 
     # ── API 1: football-data.org ──────────────────────────────────────────────
     try:
-        token = st.secrets.get("FOOTBALL_DATA_TOKEN", "138c14b64cc6494f96eaa6142915c55f")
+        token = st.secrets.get("FOOTBALL_DATA_TOKEN", "")
         if token:
             url = "https://api.football-data.org/v4/competitions/WC/matches?season=2026"
             r = requests.get(url, headers={"X-Auth-Token": token}, timeout=6)
@@ -613,33 +613,67 @@ def _countdown_brasil():
         return f"{dias}d {horas_r:02d}h {minutos:02d}min", PROXIMO_JOGO_BRASIL["nome"]
     return f"{horas:02d}h {minutos:02d}min", PROXIMO_JOGO_BRASIL["nome"]
 
+def _grupos_com_resultado():
+    """
+    Retorna um set com os nomes dos grupos que já têm ao menos
+    um jogo finalizado segundo os dados da API.
+    Enquanto nenhum jogo ocorreu (ou a API só retornou o calendário fixo),
+    o set fica vazio e nenhum grupo pontua.
+    """
+    finalizados = set()
+    jogos_reais = api_data.get("jogos_reais", [])
+    if not jogos_reais:
+        return finalizados  # API não retornou nada real ainda
+
+    for nome_grupo, times in GRUPOS_CONFIG.items():
+        for jogo in jogos_reais:
+            if jogo.get("status") != "FINISHED":
+                continue
+            # Verifica se algum dos times do grupo aparece no jogo
+            partes = jogo["jogo"].replace(" x ", "|").split("|")
+            t_c = partes[0].strip() if len(partes) > 0 else ""
+            t_f = partes[1].strip() if len(partes) > 1 else ""
+            if t_c in times or t_f in times:
+                finalizados.add(nome_grupo)
+                break  # basta um jogo finalizado neste grupo
+
+    return finalizados
+
+
 def _calcular_pontuacao(amigo):
     """Calcula pontuação de um amigo. Retorna (total, detalhes)."""
-    user   = st.session_state.banco[amigo]
-    real   = api_data
-    total  = 0
+    user     = st.session_state.banco[amigo]
+    real     = api_data
+    total    = 0
     detalhes = []
+
     if not user["travado"]:
         return 0, []
-    # Grupos — 2 pts por posição correta (1º e 2º)
+
+    # Grupos com ao menos 1 jogo finalizado — único momento em que pontua
+    grupos_ativos = _grupos_com_resultado()
+
     pts_grupos = 0
     for g in GRUPOS_CONFIG:
+        if g not in grupos_ativos:
+            continue  # Nenhum jogo deste grupo terminou ainda — não pontua
         if user["classificacao"][g][0] == real["classificacao_real"][g][0]:
             pts_grupos += 2
         if user["classificacao"][g][1] == real["classificacao_real"][g][1]:
             pts_grupos += 2
     total += pts_grupos
     detalhes.append(("Fase de grupos", pts_grupos))
+
     # Jogos do Brasil — 5 pts placar exato, 3 pts vencedor/empate correto
     pts_brasil = 0
     for i in range(3):
-        b = i * 2
+        b     = i * 2
         p_br  = user["placar_brasil"][b]
         p_adv = user["placar_brasil"][b + 1]
         r_br  = real["gols_brasil"][b]
         r_adv = real["gols_brasil"][b + 1]
         if r_br is None or r_adv is None:
-            continue   # Jogo ainda não ocorreu — não pontua
+            continue  # Jogo ainda não ocorreu — não pontua
         if p_br == r_br and p_adv == r_adv:
             pts_brasil += 5
         elif (
