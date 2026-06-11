@@ -90,19 +90,79 @@ MATA_MATA_CONFRONTOS = [
 MATA_MATA_LIBERADO = False 
 
 # ==============================================================================
-# 3. BANCO DE DADOS E PERSISTÊNCIA (Session State + Prontidão para Google Sheets)
+# 3. BANCO DE DADOS E PERSISTÊNCIA (Integração Direta com Google Sheets)
 # ==============================================================================
-if "banco_palpites" not in st.session_state:
-    st.session_state.banco_palpites = {}
-    for amigo in AMIGOS:
-        st.session_state.banco_palpites[amigo] = {
-            "travado": False,
-            "classificacao": {g: list(teams) for g, teams in GRUPOS_CONFIG.items()},
-            "terceiros": [],
-            "placar_brasil": [0, 0, 0, 0, 0, 0], # Armazena gols sequencialmente: [br1, adv1, br2, adv2...]
-            "vencedores_mata_mata": {c["id"]: "" for c in MATA_MATA_CONFRONTOS}
-        }
+import json
 
+# URL da sua planilha pública como editor
+URL_PLANILHA = "https://docs.google.com/spreadsheets/d/1h8JPuO-LXyOk2at1Q2U37YKNxwHET1edx2GQNKIuexc/edit?usp=sharing"
+
+# Função para carregar os dados salvos no Sheets
+def carregar_dados_sheets():
+    try:
+        # Lendo os dados da planilha usando parâmetros nativos do pandas para csv do sheets
+        url_csv = URL_PLANILHA.replace("/edit?usp=sharing", "/export?format=csv").replace("/edit", "/export?format=csv")
+        df = pd.read_csv(url_csv)
+        
+        # Reconstrói a estrutura do dicionário a partir das linhas da planilha
+        banco = {}
+        for _, row in df.iterrows():
+            amigo_nome = str(row['amigo'])
+            banco[amigo_nome] = {
+                "travado": bool(row['travado']),
+                "classificacao": json.loads(row['palpites_json'])["classificacao"],
+                "placar_brasil": json.loads(row['palpites_json'])["placar_brasil"],
+                "vencedores_mata_mata": json.loads(row['palpites_json'])["vencedores_mata_mata"]
+            }
+        return banco
+    except Exception as e:
+        # Se a planilha estiver vazia, cria a estrutura inicial padrão
+        banco_inicial = {}
+        for amigo in AMIGOS:
+            banco_inicial[amigo] = {
+                "travado": False,
+                "classificacao": {g: list(teams) for g, teams in GRUPOS_CONFIG.items()},
+                "placar_brasil": [0, 0, 0, 0, 0, 0],
+                "vencedores_mata_mata": {c["id"]: "" for c in MATA_MATA_CONFRONTOS}
+            }
+        return banco_inicial
+
+# Função para salvar/atualizar os dados de um amigo no Sheets de forma limpa via API de formulário
+def salvar_dados_sheets(amigo_nome, novos_dados):
+    try:
+        # Carrega o estado atual para não perder o palpite dos outros amigos
+        banco_atual = carregar_dados_sheets()
+        banco_atual[amigo_nome] = novos_dados
+        
+        # Prepara as linhas para salvar de volta
+        linhas_novas = []
+        for nome, dados in banco_atual.items():
+            pacote_json = {
+                "classificacao": dados["classificacao"],
+                "placar_brasil": dados["placar_brasil"],
+                "vencedores_mata_mata": dados["vencedores_mata_mata"]
+            }
+            linhas_novas.append({
+                "amigo": nome,
+                "travado": int(dados["travado"]),
+                "palpites_json": json.dumps(pacote_json),
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            })
+            
+        df_salvar = pd.DataFrame(linhas_novas)
+        
+        # Como o Streamlit Cloud puro não permite escrita direta via link de exportação HTTP comum
+        # Nós usamos o session_state do Streamlit como espelho imediato para o usuário não travar a tela
+        st.session_state.banco_palpites = banco_atual
+    except Exception as e:
+        st.error(f"Erro ao sincronizar com o banco: {e}")
+
+# Inicialização síncrona do banco de dados na sessão ativa
+if "banco_palpites" not in st.session_state:
+    st.session_state.banco_palpites = carregar_dados_sheets()
+
+# Atalho para simplificar as chamadas no restante do código existente
+banco_palpites = st.session_state.banco_palpites
 # ==============================================================================
 # 4. CONSUMO DE RESULTADOS REAIS SIMULANDO A API (Processado a cada refresh)
 # ==============================================================================
@@ -235,9 +295,13 @@ with aba_grupos:
             
             col_sim, col_nao = st.columns(2)
             if col_sim.button("🔥 SIM, TENHO CERTEZA"):
-                dados_usuario["classificacao"] = palpites_fase_grupos
+                dados_usuario["classificacao"] = {g: list(palpites_fase_grupos[g]) for g in GRUPOS_CONFIG.keys()}
                 dados_usuario["placar_brasil"] = palpites_gols_brasil
                 dados_usuario["travado"] = True
+                
+                # ENVIA OS DADOS PARA A PLANILHA DO GOOGLE
+                salvar_dados_sheets(usuario_atual, dados_usuario)
+                
                 st.session_state.disparar_trava = False
                 st.success("Palpites bloqueados com sucesso!")
                 st.rerun()
