@@ -393,15 +393,11 @@ if "banco_palpites" not in st.session_state:
     except:
         st.session_state.banco_palpites = criar_banco_emergencia()
 
-# Se mesmo após carregar os dados, o amigo selecionado não existir na memória:
-if usuario_atual not in st.session_state.banco_palpites:
-    st.warning("⚠️ Reconstruindo base de dados corrompida. Aguarde...")
-    banco_emergencia = criar_banco_emergencia()
-    
-    # Mescla o banco de emergência mantendo o que já existia
-    for amigo in AMIGOS:
-        if amigo not in st.session_state.banco_palpites:
-            st.session_state.banco_palpites[amigo] = banco_emergencia[amigo]
+# 🚨 A MUDANÇA ESTÁ AQUI: Garante que NENHUM amigo fique de fora (resolve a aba de Ranking)
+for amigo in AMIGOS:
+    if amigo not in st.session_state.banco_palpites:
+        banco_emergencia = criar_banco_emergencia()
+        st.session_state.banco_palpites[amigo] = banco_emergencia[amigo]
 
 # Agora é 100% impossível dar KeyError, a variável é lida com segurança
 dados_usuario = st.session_state.banco_palpites[usuario_atual]
