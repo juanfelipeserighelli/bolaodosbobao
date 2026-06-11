@@ -1,702 +1,979 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
-from datetime import datetime
+import json
+import requests
+from datetime import datetime, timezone
 
 # ==============================================================================
-# 1. CONFIGURAÇÕES DA PÁGINA (Design Premium Otimizado para Chrome Mobile)
+# CONFIGURAÇÃO DA PÁGINA
 # ==============================================================================
 st.set_page_config(
-    page_title="Bolão do Bobão Copa 2026",
+    page_title="Bolão do Bobão — Copa 2026",
     page_icon="⚽",
     layout="centered",
     initial_sidebar_state="collapsed"
 )
 
-# Injeção de CSS customizado para transformar o Streamlit em um App Mobile nativo
 st.markdown("""
-    <style>
-    /* Reset de margens e espaçamentos para Mobile */
-    .main .block-container { padding-top: 1rem; padding-bottom: 2rem; padding-left: 10px; padding-right: 10px; }
-    
-    /* Cores de Fundo e Tipografia */
-    body { background-color: #0f172a; color: #f8fafc; }
-    h1 { font-size: 24px !important; font-weight: 800 !important; text-align: center; color: #1e40af; margin-bottom: 5px; }
-    h2 { font-size: 18px !important; font-weight: 700 !important; color: #0f766e; margin-top: 15px; }
-    h3 { font-size: 15px !important; font-weight: 600 !important; color: #334155; }
-    
-    /* Customização dos Tabs */
-    .stTabs [data-baseweb="tab-list"] { gap: 4px; justify-content: space-between; }
-    .stTabs [data-baseweb="tab"] { font-size: 12px !important; padding: 8px 10px !important; border-radius: 8px 8px 0px 0px; background-color: #f1f5f9; }
-    .stTabs [aria-selected="true"] { background-color: #1e40af !important; color: white !important; font-weight: bold; }
-    
-    /* Customização de Cards e Containers de Grupos */
-    .group-card { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    .group-header { font-weight: bold; background-color: #1e40af; color: white; padding: 6px 12px; border-radius: 8px; margin-bottom: 10px; font-size: 14px; text-align: center; }
-    
-    /* Caixa de Confirmação - Trava do Cuzão */
-    .cuzao-box { background-color: #fef2f2; border: 2px solid #ef4444; padding: 15px; border-radius: 12px; text-align: center; margin: 15px 0px; }
-    .cuzao-title { color: #dc2626 !important; font-weight: bold !important; font-size: 16px !important; }
-    
-    /* Alertas de Status */
-    .status-travado { background-color: #d1fae5; border-left: 5px solid #10b981; padding: 10px; border-radius: 6px; color: #065f46; font-weight: bold; font-size: 13px; text-align: center; margin-bottom: 15px; }
-    
-    /* Ajustes de tabelas e inputs */
-    .stNumberInput input { font-size: 16px !important; text-align: center; }
-    .stButton>button { width: 100%; border-radius: 8px; height: 3rem; font-weight: bold; }
-    </style>
+<style>
+/* ── Reset mobile ── */
+.main .block-container {
+    padding-top: 0.75rem;
+    padding-bottom: 3rem;
+    padding-left: 12px;
+    padding-right: 12px;
+    max-width: 680px;
+}
+
+/* ── Tipografia ── */
+h1 { font-size: 22px !important; font-weight: 800 !important; text-align: center;
+     letter-spacing: -0.5px; color: #1e3a5f !important; margin-bottom: 2px !important; }
+h2 { font-size: 16px !important; font-weight: 700 !important; color: #1e3a5f !important;
+     margin-top: 18px !important; margin-bottom: 6px !important; }
+h3 { font-size: 14px !important; font-weight: 600 !important; color: #334155 !important; }
+
+/* ── Tabs ── */
+.stTabs [data-baseweb="tab-list"] { gap: 3px; background: #f1f5f9; padding: 4px;
+    border-radius: 10px; }
+.stTabs [data-baseweb="tab"] {
+    font-size: 12px !important; font-weight: 600 !important;
+    padding: 7px 10px !important; border-radius: 7px !important;
+    background: transparent !important; color: #64748b !important;
+    border: none !important;
+}
+.stTabs [aria-selected="true"] {
+    background: #1e3a5f !important; color: #ffffff !important;
+}
+
+/* ── Cards de grupo ── */
+.group-card {
+    background: #ffffff; border: 1px solid #e2e8f0;
+    border-radius: 12px; padding: 12px 14px; margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.group-header {
+    font-weight: 700; background: #1e3a5f; color: white;
+    padding: 5px 12px; border-radius: 7px; margin-bottom: 10px;
+    font-size: 13px; text-align: center;
+}
+.group-header-br {
+    font-weight: 700; background: #15803d; color: white;
+    padding: 5px 12px; border-radius: 7px; margin-bottom: 10px;
+    font-size: 13px; text-align: center;
+}
+
+/* ── Status e alertas ── */
+.status-travado {
+    background: #dcfce7; border-left: 4px solid #16a34a;
+    padding: 10px 14px; border-radius: 8px; color: #14532d;
+    font-weight: 700; font-size: 13px; text-align: center;
+    margin-bottom: 14px;
+}
+.status-editando {
+    background: #fef9c3; border-left: 4px solid #ca8a04;
+    padding: 10px 14px; border-radius: 8px; color: #713f12;
+    font-weight: 600; font-size: 13px; margin-bottom: 14px;
+}
+
+/* ── Caixa de confirmação ── */
+.cuzao-box {
+    background: #fff1f2; border: 2px solid #e11d48;
+    padding: 16px; border-radius: 12px; text-align: center; margin: 12px 0;
+}
+.cuzao-title { color: #be123c !important; font-weight: 700 !important;
+               font-size: 15px !important; margin: 0 0 6px !important; }
+.cuzao-sub   { color: #3f3f46; font-size: 13px; font-weight: 500; margin: 0; }
+
+/* ── Calendário ── */
+.jogo-card {
+    background: #ffffff; border: 1px solid #e2e8f0;
+    border-radius: 10px; padding: 10px 13px; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 10px;
+}
+.jogo-data { font-size: 11px; color: #64748b; min-width: 36px; text-align: center; }
+.jogo-hora { font-size: 11px; font-weight: 700; color: #334155; min-width: 34px; }
+.jogo-nome { font-size: 13px; font-weight: 600; color: #1e293b; flex: 1; }
+.jogo-local { font-size: 11px; color: #94a3b8; }
+.badge-finalizado { background: #dcfce7; color: #15803d; font-size: 10px;
+    font-weight: 700; padding: 2px 7px; border-radius: 20px; white-space: nowrap; }
+.badge-aovivo { background: #fef2f2; color: #dc2626; font-size: 10px;
+    font-weight: 700; padding: 2px 7px; border-radius: 20px; white-space: nowrap;
+    animation: pulse-badge 1.5s ease-in-out infinite; }
+.badge-previsto { background: #f1f5f9; color: #64748b; font-size: 10px;
+    font-weight: 600; padding: 2px 7px; border-radius: 20px; white-space: nowrap; }
+@keyframes pulse-badge {
+    0%, 100% { opacity: 1; } 50% { opacity: 0.6; }
+}
+.data-header {
+    font-size: 12px; font-weight: 700; color: #475569;
+    background: #f8fafc; padding: 5px 12px; border-radius: 6px;
+    margin: 10px 0 6px; border-left: 3px solid #1e3a5f;
+}
+.jogo-brasil { border-left: 3px solid #15803d !important; }
+
+/* ── Countdown ── */
+.countdown-box {
+    background: linear-gradient(135deg, #1e3a5f 0%, #1d4ed8 100%);
+    color: white; border-radius: 12px; padding: 12px 16px;
+    text-align: center; margin-bottom: 16px;
+}
+.countdown-label { font-size: 11px; font-weight: 600; opacity: 0.8;
+    text-transform: uppercase; letter-spacing: 0.05em; }
+.countdown-time  { font-size: 22px; font-weight: 800; letter-spacing: 1px; }
+.countdown-game  { font-size: 12px; opacity: 0.85; margin-top: 2px; }
+
+/* ── Ranking ── */
+.rank-row {
+    display: flex; align-items: center; gap: 10px;
+    background: #ffffff; border: 1px solid #e2e8f0;
+    border-radius: 10px; padding: 10px 13px; margin-bottom: 7px;
+}
+.rank-pos { font-size: 18px; font-weight: 800; min-width: 28px; color: #1e3a5f; }
+.rank-nome { font-size: 14px; font-weight: 700; color: #1e293b; flex: 1; }
+.rank-pts { font-size: 20px; font-weight: 800; color: #1e3a5f; min-width: 40px; text-align: right; }
+.rank-pts-label { font-size: 10px; color: #94a3b8; text-align: right; }
+.rank-badges { font-size: 12px; color: #64748b; }
+.rank-status-open { color: #ca8a04; font-size: 11px; font-weight: 600; }
+.rank-status-lock { color: #16a34a; font-size: 11px; font-weight: 600; }
+
+/* ── PIN ── */
+.pin-box {
+    background: #f8fafc; border: 1.5px solid #cbd5e1;
+    border-radius: 12px; padding: 20px; text-align: center; margin: 12px 0;
+}
+
+/* ── Modo view-only ── */
+.view-banner {
+    background: #eff6ff; border: 1px solid #bfdbfe;
+    border-radius: 8px; padding: 9px 14px; font-size: 13px;
+    color: #1d4ed8; font-weight: 600; margin-bottom: 14px; text-align: center;
+}
+
+/* ── Mata-mata ── */
+.mm-card {
+    background: #f8fafc; border: 1px solid #e2e8f0;
+    border-radius: 10px; padding: 11px 14px; margin-bottom: 8px;
+}
+.mm-id { font-size: 10px; color: #94a3b8; font-weight: 600;
+    text-transform: uppercase; margin-bottom: 4px; }
+.mm-times { font-size: 13px; font-weight: 600; color: #334155; }
+
+/* ── Fonte de dados ── */
+.fonte-dados {
+    font-size: 11px; color: #94a3b8; text-align: right;
+    margin-bottom: 4px; font-style: italic;
+}
+
+/* ── Inputs ── */
+.stNumberInput input { font-size: 16px !important; text-align: center !important; }
+.stButton > button { width: 100%; border-radius: 8px; height: 2.8rem;
+    font-weight: 700; font-size: 14px; }
+.stSelectbox label { font-size: 13px !important; }
+
+/* ── Regras de pontuação ── */
+.regra-box {
+    background: #f0f9ff; border: 1px solid #bae6fd;
+    border-radius: 10px; padding: 12px 14px; margin-bottom: 14px;
+}
+.regra-item { font-size: 13px; color: #0c4a6e; padding: 3px 0; }
+</style>
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# 2. DEFINIÇÃO DA ESTRUTURA DOS DADOS (Copa de 48 Seleções conforme o GE)
+# DADOS FIXOS
 # ==============================================================================
 AMIGOS = ["Fefo", "Vini", "Nico", "Bruno", "Renan", "Juan"]
 
-# Configuração do chaveamento de grupos oficial fornecido
 GRUPOS_CONFIG = {
     "Grupo A": ["Tchéquia", "México", "África do Sul", "República da Coreia"],
     "Grupo B": ["Bósnia e Herzegovina", "Canadá", "Catar", "Suíça"],
     "Grupo C": ["Brasil", "Haiti", "Marrocos", "Escócia"],
-    "Grupo D": ["Austrália", "Paraguai", "Turquia", "Estados Unidos da América"],
+    "Grupo D": ["Austrália", "Paraguai", "Turquia", "Estados Unidos"],
     "Grupo E": ["Curaçao", "Equador", "Alemanha", "Costa do Marfim"],
     "Grupo F": ["Japão", "Países Baixos", "Suécia", "Tunísia"],
-    "Grupo G": ["Bélgica", "Egito", "República Islâmica do Irã", "Nova Zelândia"],
+    "Grupo G": ["Bélgica", "Egito", "Irã", "Nova Zelândia"],
     "Grupo H": ["Cabo Verde", "Arábia Saudita", "Espanha", "Uruguai"],
     "Grupo I": ["França", "Iraque", "Noruega", "Senegal"],
     "Grupo J": ["Argélia", "Argentina", "Áustria", "Jordânia"],
     "Grupo K": ["Colômbia", "RD Congo", "Portugal", "Uzbequistão"],
-    "Grupo L": ["Croácia", "Inglaterra", "Gana", "Panamá"]
+    "Grupo L": ["Croácia", "Inglaterra", "Gana", "Panamá"],
 }
 
 JOGOS_BRASIL = [
-    {"rodada": "Rodada 1", "jogo": "Brasil x Marrocos", "data": "13 de Junho - 19h", "loc": "Nova York/Nova Jersey"},
-    {"rodada": "Rodada 2", "jogo": "Brasil x Haiti", "data": "19 de Junho - 21h30", "loc": "Filadélfia"},
-    {"rodada": "Rodada 3", "jogo": "Escócia x Brasil", "data": "24 de Junho - 19h", "loc": "Miami"}
+    {"rodada": 1, "jogo": "Brasil x Marrocos",  "data": "13/06", "hora": "19h00", "loc": "Nova York/NJ"},
+    {"rodada": 2, "jogo": "Brasil x Haiti",      "data": "19/06", "hora": "21h30", "loc": "Filadélfia"},
+    {"rodada": 3, "jogo": "Escócia x Brasil",    "data": "24/06", "hora": "19h00", "loc": "Miami"},
 ]
 
-# Configuração fixa do Chaveamento do Mata-Mata de 32 times informado pelo GE
 MATA_MATA_CONFRONTOS = [
-    {"id": "M1", "t1": "1E", "t2": "3º colocado"}, {"id": "M2", "t1": "1I", "t2": "3º colocado"},
-    {"id": "M3", "t1": "2A", "t2": "2B"},          {"id": "M4", "t1": "1F", "t2": "2C"},
-    {"id": "M5", "t1": "2K", "t2": "2L"},          {"id": "M6", "t1": "1H", "t2": "2J"},
-    {"id": "M7", "t1": "1D", "t2": "3º colocado"}, {"id": "M8", "t1": "1G", "t2": "3º colocado"},
-    {"id": "M9", "t1": "1C", "t2": "2F"},          {"id": "M10", "t1": "2E", "t2": "2I"},
-    {"id": "M11", "t1": "1A", "t2": "3º colocado"}, {"id": "M12", "t1": "1L", "t2": "3º colocado"},
-    {"id": "M13", "t1": "1J", "t2": "2H"},         {"id": "M14", "t1": "2D", "t2": "2G"},
-    {"id": "M15", "t1": "1B", "t2": "3º colocado"}, {"id": "M16", "t1": "1K", "t2": "3º colocado"}
+    {"id": "M1",  "t1": "1º E", "t2": "3º colocado"},
+    {"id": "M2",  "t1": "1º I", "t2": "3º colocado"},
+    {"id": "M3",  "t1": "2º A", "t2": "2º B"},
+    {"id": "M4",  "t1": "1º F", "t2": "2º C"},
+    {"id": "M5",  "t1": "2º K", "t2": "2º L"},
+    {"id": "M6",  "t1": "1º H", "t2": "2º J"},
+    {"id": "M7",  "t1": "1º D", "t2": "3º colocado"},
+    {"id": "M8",  "t1": "1º G", "t2": "3º colocado"},
+    {"id": "M9",  "t1": "1º C", "t2": "2º F"},
+    {"id": "M10", "t1": "2º E", "t2": "2º I"},
+    {"id": "M11", "t1": "1º A", "t2": "3º colocado"},
+    {"id": "M12", "t1": "1º L", "t2": "3º colocado"},
+    {"id": "M13", "t1": "1º J", "t2": "2º H"},
+    {"id": "M14", "t1": "2º D", "t2": "2º G"},
+    {"id": "M15", "t1": "1º B", "t2": "3º colocado"},
+    {"id": "M16", "t1": "1º K", "t2": "3º colocado"},
 ]
 
-# Controle de Liberação do Mata-Mata pelo Admin do Código
-MATA_MATA_LIBERADO = False 
+# Libera aba do mata-mata para edição quando os confrontos reais forem definidos
+MATA_MATA_LIBERADO = False
+
+# Próximo jogo do Brasil para o countdown
+PROXIMO_JOGO_BRASIL = {
+    "nome":  "Brasil x Marrocos",
+    "data_hora": datetime(2026, 6, 13, 22, 0, 0, tzinfo=timezone.utc),  # 19h Brasília = 22h UTC
+}
 
 # ==============================================================================
-# 3. BANCO DE DADOS E PERSISTÊNCIA (Integração Direta com Google Sheets)
+# CALENDÁRIO COMPLETO (fallback estático)
 # ==============================================================================
-import json
+CALENDARIO_FIXO = [
+    {"data": "11/06", "hora": "16h00", "jogo": "México x África do Sul",      "local": "Cidade do México", "brasil": False},
+    {"data": "11/06", "hora": "23h00", "jogo": "Tchéquia x Coreia do Sul",    "local": "Guadalajara",      "brasil": False},
+    {"data": "12/06", "hora": "16h00", "jogo": "Canadá x Bósnia",             "local": "Toronto",          "brasil": False},
+    {"data": "12/06", "hora": "22h00", "jogo": "Estados Unidos x Paraguai",   "local": "Los Angeles",      "brasil": False},
+    {"data": "13/06", "hora": "16h00", "jogo": "Catar x Suíça",               "local": "San Francisco",    "brasil": False},
+    {"data": "13/06", "hora": "19h00", "jogo": "Brasil x Marrocos",           "local": "Nova York/NJ",     "brasil": True},
+    {"data": "13/06", "hora": "22h00", "jogo": "Haiti x Escócia",             "local": "Boston",           "brasil": False},
+    {"data": "14/06", "hora": "01h00", "jogo": "Austrália x Turquia",         "local": "Vancouver",        "brasil": False},
+    {"data": "14/06", "hora": "14h00", "jogo": "Alemanha x Curaçao",          "local": "Houston",          "brasil": False},
+    {"data": "14/06", "hora": "17h00", "jogo": "Países Baixos x Japão",       "local": "Dallas",           "brasil": False},
+    {"data": "14/06", "hora": "20h00", "jogo": "Costa do Marfim x Equador",   "local": "Filadélfia",       "brasil": False},
+    {"data": "14/06", "hora": "23h00", "jogo": "Suécia x Tunísia",            "local": "Monterrey",        "brasil": False},
+    {"data": "15/06", "hora": "13h00", "jogo": "Espanha x Cabo Verde",        "local": "Atlanta",          "brasil": False},
+    {"data": "15/06", "hora": "16h00", "jogo": "Bélgica x Egito",             "local": "Seattle",          "brasil": False},
+    {"data": "15/06", "hora": "19h00", "jogo": "Arábia Saudita x Uruguai",    "local": "Miami",            "brasil": False},
+    {"data": "15/06", "hora": "22h00", "jogo": "Irã x Nova Zelândia",         "local": "Los Angeles",      "brasil": False},
+    {"data": "16/06", "hora": "16h00", "jogo": "França x Senegal",            "local": "Nova York/NJ",     "brasil": False},
+    {"data": "16/06", "hora": "19h00", "jogo": "Iraque x Noruega",            "local": "Boston",           "brasil": False},
+    {"data": "16/06", "hora": "22h00", "jogo": "Argentina x Argélia",         "local": "Kansas City",      "brasil": False},
+    {"data": "17/06", "hora": "01h00", "jogo": "Áustria x Jordânia",          "local": "San Francisco",    "brasil": False},
+    {"data": "17/06", "hora": "14h00", "jogo": "Portugal x RD Congo",         "local": "Houston",          "brasil": False},
+    {"data": "17/06", "hora": "17h00", "jogo": "Inglaterra x Croácia",        "local": "Dallas",           "brasil": False},
+    {"data": "17/06", "hora": "20h00", "jogo": "Gana x Panamá",               "local": "Toronto",          "brasil": False},
+    {"data": "17/06", "hora": "23h00", "jogo": "Uzbequistão x Colômbia",      "local": "Cidade do México", "brasil": False},
+    {"data": "18/06", "hora": "13h00", "jogo": "Tchéquia x África do Sul",    "local": "Atlanta",          "brasil": False},
+    {"data": "18/06", "hora": "16h00", "jogo": "Suíça x Bósnia",              "local": "Los Angeles",      "brasil": False},
+    {"data": "18/06", "hora": "19h00", "jogo": "Canadá x Catar",              "local": "Vancouver",        "brasil": False},
+    {"data": "18/06", "hora": "22h00", "jogo": "México x Coreia do Sul",      "local": "Guadalajara",      "brasil": False},
+    {"data": "19/06", "hora": "16h00", "jogo": "Estados Unidos x Austrália",  "local": "Seattle",          "brasil": False},
+    {"data": "19/06", "hora": "19h00", "jogo": "Escócia x Marrocos",          "local": "Boston",           "brasil": False},
+    {"data": "19/06", "hora": "21h30", "jogo": "Brasil x Haiti",              "local": "Filadélfia",       "brasil": True},
+    {"data": "20/06", "hora": "00h00", "jogo": "Turquia x Paraguai",          "local": "San Francisco",    "brasil": False},
+    {"data": "20/06", "hora": "14h00", "jogo": "Países Baixos x Suécia",      "local": "Houston",          "brasil": False},
+    {"data": "20/06", "hora": "17h00", "jogo": "Alemanha x Costa do Marfim",  "local": "Toronto",          "brasil": False},
+    {"data": "20/06", "hora": "21h00", "jogo": "Equador x Curaçao",           "local": "Kansas City",      "brasil": False},
+    {"data": "21/06", "hora": "01h00", "jogo": "Tunísia x Japão",             "local": "Monterrey",        "brasil": False},
+    {"data": "21/06", "hora": "13h00", "jogo": "Espanha x Arábia Saudita",    "local": "Atlanta",          "brasil": False},
+    {"data": "21/06", "hora": "16h00", "jogo": "Bélgica x Irã",               "local": "Los Angeles",      "brasil": False},
+    {"data": "21/06", "hora": "19h00", "jogo": "Uruguai x Cabo Verde",        "local": "Miami",            "brasil": False},
+    {"data": "21/06", "hora": "22h00", "jogo": "Nova Zelândia x Egito",       "local": "Vancouver",        "brasil": False},
+    {"data": "22/06", "hora": "14h00", "jogo": "Argentina x Áustria",         "local": "Dallas",           "brasil": False},
+    {"data": "22/06", "hora": "18h00", "jogo": "França x Iraque",             "local": "Filadélfia",       "brasil": False},
+    {"data": "22/06", "hora": "21h00", "jogo": "Noruega x Senegal",           "local": "Nova York/NJ",     "brasil": False},
+    {"data": "23/06", "hora": "00h00", "jogo": "Jordânia x Argélia",          "local": "San Francisco",    "brasil": False},
+    {"data": "23/06", "hora": "14h00", "jogo": "Portugal x Uzbequistão",      "local": "Houston",          "brasil": False},
+    {"data": "23/06", "hora": "17h00", "jogo": "Inglaterra x Gana",           "local": "Boston",           "brasil": False},
+    {"data": "23/06", "hora": "20h00", "jogo": "Panamá x Croácia",            "local": "Toronto",          "brasil": False},
+    {"data": "23/06", "hora": "23h00", "jogo": "Colômbia x RD Congo",         "local": "Guadalajara",      "brasil": False},
+    {"data": "24/06", "hora": "16h00", "jogo": "Suíça x Canadá",              "local": "Vancouver",        "brasil": False},
+    {"data": "24/06", "hora": "16h00", "jogo": "Bósnia x Catar",              "local": "Seattle",          "brasil": False},
+    {"data": "24/06", "hora": "19h00", "jogo": "Escócia x Brasil",            "local": "Miami",            "brasil": True},
+    {"data": "24/06", "hora": "19h00", "jogo": "Marrocos x Haiti",            "local": "Atlanta",          "brasil": False},
+    {"data": "24/06", "hora": "22h00", "jogo": "Tchéquia x México",           "local": "Cidade do México", "brasil": False},
+    {"data": "24/06", "hora": "22h00", "jogo": "África do Sul x Coreia",      "local": "Monterrey",        "brasil": False},
+    {"data": "25/06", "hora": "17h00", "jogo": "Equador x Alemanha",          "local": "Nova York/NJ",     "brasil": False},
+    {"data": "25/06", "hora": "17h00", "jogo": "Curaçao x Costa do Marfim",   "local": "Filadélfia",       "brasil": False},
+    {"data": "25/06", "hora": "20h00", "jogo": "Japão x Suécia",              "local": "Dallas",           "brasil": False},
+    {"data": "25/06", "hora": "20h00", "jogo": "Tunísia x Países Baixos",     "local": "Kansas City",      "brasil": False},
+    {"data": "25/06", "hora": "23h00", "jogo": "Turquia x Estados Unidos",    "local": "Los Angeles",      "brasil": False},
+    {"data": "25/06", "hora": "23h00", "jogo": "Paraguai x Austrália",        "local": "San Francisco",    "brasil": False},
+    {"data": "26/06", "hora": "16h00", "jogo": "Noruega x França",            "local": "Boston",           "brasil": False},
+    {"data": "26/06", "hora": "16h00", "jogo": "Senegal x Iraque",            "local": "Toronto",          "brasil": False},
+    {"data": "26/06", "hora": "21h00", "jogo": "Cabo Verde x Arábia Saudita", "local": "Houston",          "brasil": False},
+    {"data": "26/06", "hora": "21h00", "jogo": "Uruguai x Espanha",           "local": "Guadalajara",      "brasil": False},
+    {"data": "27/06", "hora": "00h00", "jogo": "Egito x Irã",                 "local": "Seattle",          "brasil": False},
+    {"data": "27/06", "hora": "00h00", "jogo": "Nova Zelândia x Bélgica",     "local": "Vancouver",        "brasil": False},
+    {"data": "27/06", "hora": "18h00", "jogo": "Panamá x Inglaterra",         "local": "Nova York/NJ",     "brasil": False},
+    {"data": "27/06", "hora": "18h00", "jogo": "Croácia x Gana",              "local": "Filadélfia",       "brasil": False},
+    {"data": "27/06", "hora": "20h30", "jogo": "Colômbia x Portugal",         "local": "Miami",            "brasil": False},
+    {"data": "27/06", "hora": "20h30", "jogo": "RD Congo x Uzbequistão",      "local": "Atlanta",          "brasil": False},
+    {"data": "27/06", "hora": "23h00", "jogo": "Argélia x Áustria",           "local": "Kansas City",      "brasil": False},
+    {"data": "27/06", "hora": "23h00", "jogo": "Jordânia x Argentina",        "local": "Dallas",           "brasil": False},
+]
 
-# URL da sua planilha pública como editor
-URL_PLANILHA = "https://docs.google.com/spreadsheets/d/1h8JPuO-LXyOk2at1Q2U37YKNxwHET1edx2GQNKIuexc/edit?usp=sharing"
+# ==============================================================================
+# BANCO DE DADOS — JSONBin.io  (única fonte da verdade)
+# ==============================================================================
+def _jsonbin_headers():
+    key = st.secrets.get("JSONBIN_KEY", "")
+    return {"Content-Type": "application/json", "X-Master-Key": key}
 
-# Função para carregar os dados salvos no Sheets
-def carregar_dados_sheets():
+def _jsonbin_url():
+    bin_id = st.secrets.get("JSONBIN_ID", "")
+    return f"https://api.jsonbin.io/v3/b/{bin_id}"
+
+def _banco_padrao():
+    banco = {}
+    for amigo in AMIGOS:
+        banco[amigo] = {
+            "travado": False,
+            "classificacao": {g: list(t) for g, t in GRUPOS_CONFIG.items()},
+            "placar_brasil": [0, 0, 0, 0, 0, 0],
+            "vencedores_mata_mata": {c["id"]: "" for c in MATA_MATA_CONFRONTOS},
+        }
+    return banco
+
+def carregar_banco():
+    """Sempre busca do JSONBin. Retorna banco completo ou padrão em caso de falha."""
+    banco_seguro = _banco_padrao()
     try:
-        # Lendo os dados da planilha usando parâmetros nativos do pandas para csv do sheets
-        url_csv = URL_PLANILHA.replace("/edit?usp=sharing", "/export?format=csv").replace("/edit", "/export?format=csv")
-        df = pd.read_csv(url_csv)
-        
-        # Reconstrói a estrutura do dicionário a partir das linhas da planilha
-        banco = {}
-        for _, row in df.iterrows():
-            amigo_nome = str(row['amigo'])
-            banco[amigo_nome] = {
-                "travado": bool(row['travado']),
-                "classificacao": json.loads(row['palpites_json'])["classificacao"],
-                "placar_brasil": json.loads(row['palpites_json'])["placar_brasil"],
-                "vencedores_mata_mata": json.loads(row['palpites_json'])["vencedores_mata_mata"]
-            }
-        return banco
-    except Exception as e:
-        # Se a planilha estiver vazia, cria a estrutura inicial padrão
-        banco_inicial = {}
-        for amigo in AMIGOS:
-            banco_inicial[amigo] = {
-                "travado": False,
-                "classificacao": {g: list(teams) for g, teams in GRUPOS_CONFIG.items()},
-                "placar_brasil": [0, 0, 0, 0, 0, 0],
-                "vencedores_mata_mata": {c["id"]: "" for c in MATA_MATA_CONFRONTOS}
-            }
-        return banco_inicial
+        bin_id = st.secrets.get("JSONBIN_ID", "")
+        api_key = st.secrets.get("JSONBIN_KEY", "")
+        if not bin_id or not api_key:
+            return banco_seguro
+        resp = requests.get(_jsonbin_url(), headers=_jsonbin_headers(), timeout=6)
+        if resp.status_code == 200:
+            dados = resp.json().get("record", {})
+            for amigo in AMIGOS:
+                if amigo in dados:
+                    d = dados[amigo]
+                    banco_seguro[amigo]["travado"]              = bool(d.get("travado", False))
+                    banco_seguro[amigo]["classificacao"]        = d.get("classificacao",        banco_seguro[amigo]["classificacao"])
+                    banco_seguro[amigo]["placar_brasil"]        = d.get("placar_brasil",        banco_seguro[amigo]["placar_brasil"])
+                    banco_seguro[amigo]["vencedores_mata_mata"] = d.get("vencedores_mata_mata", banco_seguro[amigo]["vencedores_mata_mata"])
+    except Exception:
+        pass
+    return banco_seguro
 
-# Função para salvar/atualizar os dados de um amigo no Sheets de forma limpa via API de formulário
-def salvar_dados_sheets(amigo_nome, novos_dados):
+def salvar_banco(banco_completo):
+    """Grava o banco completo no JSONBin."""
     try:
-        # Carrega o estado atual para não perder o palpite dos outros amigos
-        banco_atual = carregar_dados_sheets()
-        banco_atual[amigo_nome] = novos_dados
-        
-        # Prepara as linhas para salvar de volta
-        linhas_novas = []
-        for nome, dados in banco_atual.items():
-            pacote_json = {
-                "classificacao": dados["classificacao"],
-                "placar_brasil": dados["placar_brasil"],
-                "vencedores_mata_mata": dados["vencedores_mata_mata"]
-            }
-            linhas_novas.append({
-                "amigo": nome,
-                "travado": int(dados["travado"]),
-                "palpites_json": json.dumps(pacote_json),
-                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            })
-            
-        df_salvar = pd.DataFrame(linhas_novas)
-        
-        # Como o Streamlit Cloud puro não permite escrita direta via link de exportação HTTP comum
-        # Nós usamos o session_state do Streamlit como espelho imediato para o usuário não travar a tela
-        st.session_state.banco_palpites = banco_atual
+        bin_id  = st.secrets.get("JSONBIN_ID", "")
+        api_key = st.secrets.get("JSONBIN_KEY", "")
+        if not bin_id or not api_key:
+            st.session_state.banco = banco_completo
+            return True
+        resp = requests.put(_jsonbin_url(), json=banco_completo, headers=_jsonbin_headers(), timeout=8)
+        if resp.status_code == 200:
+            st.session_state.banco = banco_completo
+            return True
     except Exception as e:
-        st.error(f"Erro ao sincronizar com o banco: {e}")
+        st.error(f"Erro ao salvar na nuvem: {e}")
+    return False
 
-# Inicialização síncrona do banco de dados na sessão ativa
-if "banco_palpites" not in st.session_state:
-    st.session_state.banco_palpites = carregar_dados_sheets()
-
-# Atalho para simplificar as chamadas no restante do código existente
-banco_palpites = st.session_state.banco_palpites
 # ==============================================================================
-# 4. CONSUMO DE RESULTADOS REAIS (Sistema Híbrido com Calendário Completo)
+# INICIALIZAÇÃO DO SESSION_STATE — carrega do JSONBin UMA vez por sessão
 # ==============================================================================
-import requests
-from datetime import datetime
+if "banco" not in st.session_state:
+    st.session_state.banco = carregar_banco()
 
-# Dicionário de Tradução para bater com os nomes das chaves do GE
-TRADUCAO_TIMES = {
+# Garante que nenhum amigo fique de fora (segurança contra banco antigo)
+padrao = _banco_padrao()
+for amigo in AMIGOS:
+    if amigo not in st.session_state.banco:
+        st.session_state.banco[amigo] = padrao[amigo]
+
+# ==============================================================================
+# AUTENTICAÇÃO POR PIN
+# ==============================================================================
+PINS = {
+    "Fefo":  st.secrets.get("PIN_FEFO",  "1111"),
+    "Vini":  st.secrets.get("PIN_VINI",  "2222"),
+    "Nico":  st.secrets.get("PIN_NICO",  "3333"),
+    "Bruno": st.secrets.get("PIN_BRUNO", "4444"),
+    "Renan": st.secrets.get("PIN_RENAN", "5555"),
+    "Juan":  st.secrets.get("PIN_JUAN",  "6666"),
+}
+
+if "usuario_autenticado" not in st.session_state:
+    st.session_state.usuario_autenticado = None
+if "tentativas_pin" not in st.session_state:
+    st.session_state.tentativas_pin = 0
+
+# ==============================================================================
+# RESULTADOS REAIS DA API
+# ==============================================================================
+TRADUCAO = {
     "Brazil": "Brasil", "Haiti": "Haiti", "Morocco": "Marrocos", "Scotland": "Escócia",
-    "Mexico": "México", "South Africa": "África do Sul", "Korea Republic": "República da Coreia", "South Korea": "República da Coreia", "Czech Republic": "Tchéquia", "Czechia": "Tchéquia",
-    "Bosnia and Herzegovina": "Bósnia e Herzegovina", "Canada": "Canadá", "Qatar": "Catar", "Switzerland": "Suíça",
-    "Australia": "Austrália", "Paraguay": "Paraguay", "Turkey": "Turquia", "USA": "Estados Unidos da América", "United States": "Estados Unidos da América",
-    "Curaçao": "Curaçao", "Ecuador": "Equador", "Germany": "Alemanha", "Ivory Coast": "Cote D'Ivoire", "Cote d'Ivoire": "Cote D'Ivoire",
+    "Mexico": "México", "South Africa": "África do Sul",
+    "Korea Republic": "Coreia do Sul", "Czech Republic": "Tchéquia", "Czechia": "Tchéquia",
+    "Bosnia and Herzegovina": "Bósnia", "Canada": "Canadá", "Qatar": "Catar", "Switzerland": "Suíça",
+    "Australia": "Austrália", "Paraguay": "Paraguai", "Turkey": "Turquia",
+    "USA": "Estados Unidos", "United States": "Estados Unidos",
+    "Curaçao": "Curaçao", "Ecuador": "Equador", "Germany": "Alemanha",
+    "Ivory Coast": "Costa do Marfim", "Cote d'Ivoire": "Costa do Marfim",
     "Japan": "Japão", "Netherlands": "Países Baixos", "Sweden": "Suécia", "Tunisia": "Tunísia",
-    "Belgium": "Bélgica", "Egypt": "Egito", "Iran": "República Islâmica do Irã", "New Zealand": "Nova Zelândia",
+    "Belgium": "Bélgica", "Egypt": "Egito", "Iran": "Irã", "New Zealand": "Nova Zelândia",
     "Cape Verde": "Cabo Verde", "Saudi Arabia": "Arábia Saudita", "Spain": "Espanha", "Uruguay": "Uruguai",
     "France": "França", "Iraq": "Iraque", "Norway": "Noruega", "Senegal": "Senegal",
     "Algeria": "Argélia", "Argentina": "Argentina", "Austria": "Áustria", "Jordan": "Jordânia",
-    "Colombia": "Colômbia", "DR Congo": "RD Congo", "Congo DR": "RD Congo", "Portugal": "Portugal", "Uzbekistan": "Uzbequistão",
-    "Croatia": "Croácia", "England": "Inglaterra", "Ghana": "Gana", "Panama": "Panamá"
+    "Colombia": "Colômbia", "DR Congo": "RD Congo", "Portugal": "Portugal", "Uzbekistan": "Uzbequistão",
+    "Croatia": "Croácia", "England": "Inglaterra", "Ghana": "Gana", "Panama": "Panamá",
 }
 
-def traduzir(nome_api):
-    return TRADUCAO_TIMES.get(nome_api, nome_api)
-
-@st.cache_data(ttl=900)
-def obter_resultados_reais_api():
-    # PLANO B: Calendário Oficial Completo Caso as APIs falhem ou estejam em manutenção
-    dados_padrao = {
-        "classificacao_real": {g: list(teams) for g, teams in GRUPOS_CONFIG.items()},
-        "gols_reais_brasil": [0, 0, 0, 0, 0, 0],
-        "calendario_jogos": [
-            # --- 11 de Junho ---
-            {"data": "11/06", "hora": "16h", "jogo": "México x África do Sul", "local": "Cidade do México"},
-            {"data": "11/06", "hora": "23h", "jogo": "República da Coreia x Tchéquia", "local": "Guadalajara"},
-            # --- 12 de Junho ---
-            {"data": "12/06", "hora": "16h", "jogo": "Canadá x Bósnia e Herzegovina", "local": "Toronto"},
-            {"data": "12/06", "hora": "22h", "jogo": "Estados Unidos x Paraguai", "local": "Los Angeles"},
-            # --- 13 de Junho ---
-            {"data": "13/06", "hora": "16h", "jogo": "Catar x Suíça", "local": "San Francisco"},
-            {"data": "13/06", "hora": "19h", "jogo": "Brasil x Marrocos", "local": "Nova York/NJ"},
-            {"data": "13/06", "hora": "22h", "jogo": "Haiti x Escócia", "local": "Boston"},
-            # --- 14 de Junho ---
-            {"data": "14/06", "hora": "01h", "jogo": "Austrália x Turquia", "local": "Vancouver"},
-            {"data": "14/06", "hora": "14h", "jogo": "Alemanha x Curaçao", "local": "Houston"},
-            {"data": "14/06", "hora": "17h", "jogo": "Países Baixos x Japão", "local": "Dallas"},
-            {"data": "14/06", "hora": "20h", "jogo": "Costa do Marfim x Equador", "local": "Filadélfia"},
-            {"data": "14/06", "hora": "23h", "jogo": "Suécia x Tunísia", "local": "Monterrey"},
-            # --- 15 de Junho ---
-            {"data": "15/06", "hora": "13h", "jogo": "Espanha x Cabo Verde", "local": "Atlanta"},
-            {"data": "15/06", "hora": "16h", "jogo": "Bélgica x Egito", "local": "Seattle"},
-            {"data": "15/06", "hora": "19h", "jogo": "Arábia Saudita x Uruguai", "local": "Miami"},
-            {"data": "15/06", "hora": "22h", "jogo": "Irã x Nova Zelândia", "local": "Los Angeles"},
-            # --- 16 de Junho ---
-            {"data": "16/06", "hora": "16h", "jogo": "França x Senegal", "local": "Nova York/NJ"},
-            {"data": "16/06", "hora": "19h", "jogo": "Iraque x Noruega", "local": "Boston"},
-            {"data": "16/06", "hora": "22h", "jogo": "Argentina x Argélia", "local": "Kansas City"},
-            # --- 17 de Junho ---
-            {"data": "17/06", "hora": "01h", "jogo": "Áustria x Jordânia", "local": "San Francisco"},
-            {"data": "17/06", "hora": "14h", "jogo": "Portugal x RD Congo", "local": "Houston"},
-            {"data": "17/06", "hora": "17h", "jogo": "Inglaterra x Croácia", "local": "Dallas"},
-            {"data": "17/06", "hora": "20h", "jogo": "Gana x Panamá", "local": "Toronto"},
-            {"data": "17/06", "hora": "23h", "jogo": "Uzbequistão x Colômbia", "local": "Cidade do México"},
-            # --- 18 de Junho ---
-            {"data": "18/06", "hora": "13h", "jogo": "Tchéquia x África do Sul", "local": "Atlanta"},
-            {"data": "18/06", "hora": "16h", "jogo": "Suíça x Bósnia e Herzegovina", "local": "Los Angeles"},
-            {"data": "18/06", "hora": "19h", "jogo": "Canadá x Catar", "local": "Vancouver"},
-            {"data": "18/06", "hora": "22h", "jogo": "México x República da Coreia", "local": "Guadalajara"},
-            # --- 19 de Junho ---
-            {"data": "19/06", "hora": "16h", "jogo": "Estados Unidos x Austrália", "local": "Seattle"},
-            {"data": "19/06", "hora": "19h", "jogo": "Escócia x Marrocos", "local": "Boston"},
-            {"data": "19/06", "hora": "21h30", "jogo": "Brasil x Haiti", "local": "Filadélfia"},
-            # --- 20 de Junho ---
-            {"data": "20/06", "hora": "00h", "jogo": "Turquia x Paraguai", "local": "San Francisco"},
-            {"data": "20/06", "hora": "14h", "jogo": "Países Baixos x Suécia", "local": "Houston"},
-            {"data": "20/06", "hora": "17h", "jogo": "Alemanha x Costa do Marfim", "local": "Toronto"},
-            {"data": "20/06", "hora": "21h", "jogo": "Equador x Curaçao", "local": "Kansas City"},
-            # --- 21 de Junho ---
-            {"data": "21/06", "hora": "01h", "jogo": "Tunísia x Japão", "local": "Monterrey"},
-            {"data": "21/06", "hora": "13h", "jogo": "Espanha x Arábia Saudita", "local": "Atlanta"},
-            {"data": "21/06", "hora": "16h", "jogo": "Bélgica x Irã", "local": "Los Angeles"},
-            {"data": "21/06", "hora": "19h", "jogo": "Uruguai x Cabo Verde", "local": "Miami"},
-            {"data": "21/06", "hora": "22h", "jogo": "Nova Zelândia x Egito", "local": "Vancouver"},
-            # --- 22 de Junho ---
-            {"data": "22/06", "hora": "14h", "jogo": "Argentina x Áustria", "local": "Dallas"},
-            {"data": "22/06", "hora": "18h", "jogo": "França x Iraque", "local": "Filadélfia"},
-            {"data": "22/06", "hora": "21h", "jogo": "Noruega x Senegal", "local": "Nova York/NJ"},
-            # --- 23 de Junho ---
-            {"data": "23/06", "hora": "00h", "jogo": "Jordânia x Argélia", "local": "San Francisco"},
-            {"data": "23/06", "hora": "14h", "jogo": "Portugal x Uzbequistão", "local": "Houston"},
-            {"data": "23/06", "hora": "17h", "jogo": "Inglaterra x Gana", "local": "Boston"},
-            {"data": "23/06", "hora": "20h", "jogo": "Panamá x Croácia", "local": "Toronto"},
-            {"data": "23/06", "hora": "23h", "jogo": "Colômbia x RD Congo", "local": "Guadalajara"},
-            # --- 24 de Junho ---
-            {"data": "24/06", "hora": "16h", "jogo": "Suíça x Canadá", "local": "Vancouver"},
-            {"data": "24/06", "hora": "16h", "jogo": "Bósnia e Herzegovina x Catar", "local": "Seattle"},
-            {"data": "24/06", "hora": "19h", "jogo": "Escócia x Brasil", "local": "Miami"},
-            {"data": "24/06", "hora": "19h", "jogo": "Marrocos x Haiti", "local": "Atlanta"},
-            {"data": "24/06", "hora": "22h", "jogo": "Tchéquia x México", "local": "Cidade do México"},
-            {"data": "24/06", "hora": "22h", "jogo": "África do Sul x República da Coreia", "local": "Monterrey"},
-            # --- 25 de Junho ---
-            {"data": "25/06", "hora": "17h", "jogo": "Equador x Alemanha", "local": "Nova York/NJ"},
-            {"data": "25/06", "hora": "17h", "jogo": "Curaçao x Costa do Marfim", "local": "Filadélfia"},
-            {"data": "25/06", "hora": "20h", "jogo": "Japão x Suécia", "local": "Dallas"},
-            {"data": "25/06", "hora": "20h", "jogo": "Tunísia x Países Baixos", "local": "Kansas City"},
-            {"data": "25/06", "hora": "23h", "jogo": "Turquia x Estados Unidos", "local": "Los Angeles"},
-            {"data": "25/06", "hora": "23h", "jogo": "Paraguai x Austrália", "local": "San Francisco"},
-            # --- 26 de Junho ---
-            {"data": "26/06", "hora": "16h", "jogo": "Noruega x França", "local": "Boston"},
-            {"data": "26/06", "hora": "16h", "jogo": "Senegal x Iraque", "local": "Toronto"},
-            {"data": "26/06", "hora": "21h", "jogo": "Cabo Verde x Arábia Saudita", "local": "Houston"},
-            {"data": "26/06", "hora": "21h", "jogo": "Uruguai x Espanha", "local": "Guadalajara"},
-            # --- 27 de Junho ---
-            {"data": "27/06", "hora": "00h", "jogo": "Egito x Irã", "local": "Seattle"},
-            {"data": "27/06", "hora": "00h", "jogo": "Nova Zelândia x Bélgica", "local": "Vancouver"},
-            {"data": "27/06", "hora": "18h", "jogo": "Panamá x Inglaterra", "local": "Nova York/NJ"},
-            {"data": "27/06", "hora": "18h", "jogo": "Croácia x Gana", "local": "Filadélfia"},
-            {"data": "27/06", "hora": "20h30", "jogo": "Colômbia x Portugal", "local": "Miami"},
-            {"data": "27/06", "hora": "20h30", "jogo": "RD Congo x Uzbequistão", "local": "Atlanta"},
-            {"data": "27/06", "hora": "23h", "jogo": "Argélia x Áustria", "local": "Kansas City"},
-            {"data": "27/06", "hora": "23h", "jogo": "Jordânia x Argentina", "local": "Dallas"}
-        ]
+@st.cache_data(ttl=600)
+def obter_resultados():
+    """Tenta football-data.org. Devolve dict com dados reais ou padrão."""
+    padrao = {
+        "fonte": "calendário fixo",
+        "classificacao_real": {g: list(t) for g, t in GRUPOS_CONFIG.items()},
+        "jogos_reais": [],   # lista de {jogo, placar_c, placar_f, status}
+        "gols_brasil": [None, None, None, None, None, None],  # None = jogo não ocorreu
     }
-    
-    # --- PROVEDOR 1: ZAFRONIX SPORTS API ---
     try:
-        headers_zafronix = {"X-API-Key": "zwc_free_85be12c14621f2117b7dae7f"}
-        response = requests.get("https://api.zafronix.com/fifa/worldcup/v1/tournaments/2026/fixtures", headers=headers_zafronix, timeout=5)
-        
-        if response.status_code == 200:
-            data = response.json()
-            fixtures_list = data.get("fixtures", [])
-            if len(fixtures_list) > 0:
-                calendario = []
-                gols_br = [0, 0, 0, 0, 0, 0]
-                idx_br = 0
-                
-                for match in fixtures_list:
-                    time_c = traduzir(match["home_team"])
-                    time_f = traduzir(match["away_team"])
-                    g_c = match.get("home_score")
-                    g_f = match.get("away_score")
-                    placar = f" {g_c} x {g_f} " if g_c is not None else " x "
-                    
-                    calendario.append({
-                        "data": datetime.strptime(match["date"], "%Y-%m-%d").strftime("%d/%m"),
-                        "hora": match["time"][:5],
-                        "jogo": f"{time_c}{placar}{time_f}",
-                        "local": match.get("venue", "Estádio")
-                    })
-                    
-                    if (time_c == "Brasil" or time_f == "Brasil") and match.get("status") == "FINISHED" and idx_br < 3:
-                        gols_br[idx_br*2] = int(g_c) if time_c == "Brasil" else int(g_f)
-                        gols_br[idx_br*2+1] = int(g_f) if time_c == "Brasil" else int(g_c)
-                        idx_br += 1
-                
-                return {"classificacao_real": dados_padrao["classificacao_real"], "gols_reais_brasil": gols_br, "calendario_jogos": calendario}
+        token = st.secrets.get("FOOTBALL_DATA_TOKEN", "")
+        if not token:
+            return padrao
+        headers = {"X-Auth-Token": token}
+        # Copa do Mundo 2026 = competition WC (ajustar se a API mudar o código)
+        url = "https://api.football-data.org/v4/competitions/WC/matches?season=2026"
+        r = requests.get(url, headers=headers, timeout=6)
+        if r.status_code != 200:
+            return padrao
+        matches = r.json().get("matches", [])
+        if not matches:
+            return padrao
+        jogos_reais = []
+        gols_brasil = [None, None, None, None, None, None]
+        idx_br = 0
+        for m in matches:
+            t_c = TRADUCAO.get(m["homeTeam"]["name"], m["homeTeam"]["name"])
+            t_f = TRADUCAO.get(m["awayTeam"]["name"], m["awayTeam"]["name"])
+            sc  = m.get("score", {}).get("fullTime", {})
+            gc  = sc.get("home")
+            gf  = sc.get("away")
+            status = m.get("status", "SCHEDULED")
+            jogos_reais.append({
+                "jogo":      f"{t_c} x {t_f}",
+                "placar_c":  gc,
+                "placar_f":  gf,
+                "status":    status,
+            })
+            if status == "FINISHED" and idx_br < 3:
+                if t_c == "Brasil":
+                    gols_brasil[idx_br * 2]     = gc
+                    gols_brasil[idx_br * 2 + 1] = gf
+                    idx_br += 1
+                elif t_f == "Brasil":
+                    gols_brasil[idx_br * 2]     = gf
+                    gols_brasil[idx_br * 2 + 1] = gc
+                    idx_br += 1
+        padrao["fonte"]       = "football-data.org"
+        padrao["jogos_reais"] = jogos_reais
+        padrao["gols_brasil"] = gols_brasil
+        return padrao
     except Exception:
-        pass
-        
-    # --- PROVEDOR 2: SPORTMONKS FOOTBALL API ---
+        return padrao
+
+api_data = obter_resultados()
+
+# ==============================================================================
+# HELPERS
+# ==============================================================================
+def _status_jogo(data_str: str, hora_str: str):
+    """Retorna 'finalizado', 'aovivo' ou 'previsto' baseado na data/hora atual."""
     try:
-        token_sportmonks = "Sdy1n1ctP5Q0ovO9NkVPZ5ey8Pfxqg2dRYRCmJl8lqjuk2MWw9ADP9ctWOUm"
-        response = requests.get(f"https://api.sportmonks.com/v3/football/fixtures?api_token={token_sportmonks}&include=participants", timeout=5)
-        
-        if response.status_code == 200:
-            data = response.json()
-            fixtures_list = data.get("data", [])
-            if len(fixtures_list) > 0:
-                calendario = []
-                gols_br = [0, 0, 0, 0, 0, 0]
-                idx_br = 0
-                
-                for match in fixtures_list:
-                    if match.get("league_id") == 1 or "World Cup" in str(match):
-                        participants = match.get("participants", [])
-                        if len(participants) < 2: continue
-                        
-                        time_c = traduzir(participants[0]["name"])
-                        time_f = traduzir(participants[1]["name"])
-                        scores = match.get("scores", {})
-                        g_c = scores.get("localteam_score")
-                        g_f = scores.get("visitorteam_score")
-                        placar = f" {g_c} x {g_f} " if g_c is not None else " x "
-                        
-                        calendario.append({
-                            "data": match.get("starting_at", "2026-06-11")[5:10].replace("-", "/"),
-                            "hora": match.get("starting_at", "00:00:00")[11:16],
-                            "jogo": f"{time_c}{placar}{time_f}",
-                            "local": "Arena"
-                        })
-                        
-                        if (time_c == "Brasil" or time_f == "Brasil") and match.get("state") == "ENDED" and idx_br < 3:
-                            gols_br[idx_br*2] = int(g_c) if time_c == "Brasil" else int(g_f)
-                            gols_br[idx_br*2+1] = int(g_f) if time_c == "Brasil" else int(g_c)
-                            idx_br += 1
-                
-                if len(calendario) > 0:
-                    return {"classificacao_real": dados_padrao["classificacao_real"], "gols_reais_brasil": gols_br, "calendario_jogos": calendario}
+        h_num = hora_str.replace("h", ":").rstrip(":")
+        if len(h_num) <= 5:
+            dt = datetime.strptime(f"2026/{data_str} {h_num}", "%Y/%d/%m %H:%M")
+        else:
+            return "previsto"
+        now   = datetime.now()
+        delta = (now - dt).total_seconds() / 60
+        if delta > 110:
+            return "finalizado"
+        if 0 <= delta <= 110:
+            return "aovivo"
+        return "previsto"
     except Exception:
-        pass
+        return "previsto"
 
-    return dados_padrao
+def _countdown_brasil():
+    """Retorna string do countdown para o próximo jogo do Brasil."""
+    agora = datetime.now(timezone.utc)
+    alvo  = PROXIMO_JOGO_BRASIL["data_hora"]
+    delta = alvo - agora
+    if delta.total_seconds() <= 0:
+        return None
+    horas   = int(delta.total_seconds() // 3600)
+    minutos = int((delta.total_seconds() % 3600) // 60)
+    dias    = horas // 24
+    horas_r = horas % 24
+    if dias > 0:
+        return f"{dias}d {horas_r:02d}h {minutos:02d}min", PROXIMO_JOGO_BRASIL["nome"]
+    return f"{horas:02d}h {minutos:02d}min", PROXIMO_JOGO_BRASIL["nome"]
 
-api_data = obter_resultados_reais_api()
+def _calcular_pontuacao(amigo):
+    """Calcula pontuação de um amigo. Retorna (total, detalhes)."""
+    user   = st.session_state.banco[amigo]
+    real   = api_data
+    total  = 0
+    detalhes = []
+    if not user["travado"]:
+        return 0, []
+    # Grupos — 2 pts por posição correta (1º e 2º)
+    pts_grupos = 0
+    for g in GRUPOS_CONFIG:
+        if user["classificacao"][g][0] == real["classificacao_real"][g][0]:
+            pts_grupos += 2
+        if user["classificacao"][g][1] == real["classificacao_real"][g][1]:
+            pts_grupos += 2
+    total += pts_grupos
+    detalhes.append(("Fase de grupos", pts_grupos))
+    # Jogos do Brasil — 5 pts placar exato, 3 pts vencedor/empate correto
+    pts_brasil = 0
+    for i in range(3):
+        b = i * 2
+        p_br  = user["placar_brasil"][b]
+        p_adv = user["placar_brasil"][b + 1]
+        r_br  = real["gols_brasil"][b]
+        r_adv = real["gols_brasil"][b + 1]
+        if r_br is None or r_adv is None:
+            continue   # Jogo ainda não ocorreu — não pontua
+        if p_br == r_br and p_adv == r_adv:
+            pts_brasil += 5
+        elif (
+            (p_br > p_adv and r_br > r_adv) or
+            (p_br < p_adv and r_br < r_adv) or
+            (p_br == p_adv and r_br == r_adv)
+        ):
+            pts_brasil += 3
+    total += pts_brasil
+    detalhes.append(("Jogos do Brasil", pts_brasil))
+    return total, detalhes
+
 # ==============================================================================
-# 5. HEADER & ÁREA DE SELEÇÃO DE USUÁRIO
+# CABEÇALHO
 # ==============================================================================
-st.markdown("🏆 BOLÃO DO BOBÃO COPA DO MUNDO 2026")                     
-usuario_atual = st.selectbox("👤 Identifique-se para palpitar ou visualizar:", AMIGOS)
+st.markdown("# 🏆 Bolão do Bobão — Copa 2026")
 
-# 🛡️ FUNÇÃO DE EMERGÊNCIA (Garante a estrutura básica se tudo falhar)
-def criar_banco_emergencia():
-    banco = {}
-    for amigo in AMIGOS:
-        banco[amigo] = {
-            "travado": False,
-            "classificacao": {g: list(teams) for g, teams in GRUPOS_CONFIG.items()} if "GRUPOS_CONFIG" in globals() else {},
-            "placar_brasil": [0, 0, 0, 0, 0, 0],
-            "vencedores_mata_mata": {}
-        }
-    return banco
+# Countdown
+resultado_countdown = _countdown_brasil()
+if resultado_countdown:
+    tempo_str, nome_jogo = resultado_countdown
+    st.markdown(f"""
+    <div class="countdown-box">
+        <div class="countdown-label">⏱ Próximo jogo do Brasil</div>
+        <div class="countdown-time">{tempo_str}</div>
+        <div class="countdown-game">{nome_jogo} — trave seus palpites antes!</div>
+    </div>
+    """, unsafe_allow_html=True)
 
-# 🛡️ TRAVA DE SEGURANÇA MÁXIMA
-if "banco_palpites" not in st.session_state:
-    try:
-        st.session_state.banco_palpites = carregar_dados()
-    except:
-        st.session_state.banco_palpites = criar_banco_emergencia()
-
-# 🚨 A MUDANÇA ESTÁ AQUI: Garante que NENHUM amigo fique de fora (resolve a aba de Ranking)
-for amigo in AMIGOS:
-    if amigo not in st.session_state.banco_palpites:
-        banco_emergencia = criar_banco_emergencia()
-        st.session_state.banco_palpites[amigo] = banco_emergencia[amigo]
-
-# Agora é 100% impossível dar KeyError, a variável é lida com segurança
-dados_usuario = st.session_state.banco_palpites[usuario_atual]
 # ==============================================================================
+# SELEÇÃO DE USUÁRIO + AUTENTICAÇÃO PIN
+# ==============================================================================
+col_sel, col_pin = st.columns([2, 1])
+with col_sel:
+    usuario_selecionado = st.selectbox(
+        "👤 Quem é você?",
+        AMIGOS,
+        key="selectbox_usuario"
+    )
 
-# Inicialização das abas nativas do Streamlit
-aba_grupos, aba_matamata, aba_calendario, aba_ranking = st.tabs(["📊 Chaves & BR", "🌳 Mata-Mata", "📅 Calendário", "🥇 Classificação"])
+# Detecta troca de usuário: limpa autenticação anterior
+if "ultimo_usuario" not in st.session_state:
+    st.session_state.ultimo_usuario = usuario_selecionado
+if st.session_state.ultimo_usuario != usuario_selecionado:
+    st.session_state.usuario_autenticado = None
+    st.session_state.tentativas_pin = 0
+    st.session_state.ultimo_usuario = usuario_selecionado
 
-# ------------------------------------------------------------------------------
-# ABA 1: CLASSIFICAÇÃO DAS CHAVES, SELEÇÃO DO BRASIL E TRAVA DO CUZÃO
-# ------------------------------------------------------------------------------
+# Sempre re-lê o estado REAL deste usuário do banco (garante que trava seja respeitada)
+dados_usuario = st.session_state.banco[usuario_selecionado]
+
+# Verifica se já está autenticado
+autenticado    = (st.session_state.usuario_autenticado == usuario_selecionado)
+modo_view_only = False   # será True se olhar palpites de outro
+
+with col_pin:
+    if not autenticado:
+        pin_input = st.text_input(
+            "🔑 PIN",
+            type="password",
+            max_chars=6,
+            placeholder="••••",
+            key=f"pin_{usuario_selecionado}",
+            label_visibility="visible"
+        )
+        if pin_input:
+            if pin_input == PINS[usuario_selecionado]:
+                # PIN correto — sincroniza com o banco remoto
+                banco_fresco = carregar_banco()
+                st.session_state.banco = banco_fresco
+                dados_usuario = st.session_state.banco[usuario_selecionado]
+                st.session_state.usuario_autenticado = usuario_selecionado
+                st.session_state.tentativas_pin = 0
+                st.rerun()
+            else:
+                st.session_state.tentativas_pin += 1
+                st.error(f"PIN errado ({st.session_state.tentativas_pin}x)")
+    else:
+        st.success(f"✅ Olá, {usuario_selecionado}!")
+
+# Se não autenticado, entra em modo somente-leitura
+if not autenticado:
+    modo_view_only = True
+
+# ==============================================================================
+# ABAS
+# ==============================================================================
+aba_grupos, aba_matamata, aba_calendario, aba_ranking = st.tabs(
+    ["📊 Chaves & Brasil", "🌳 Mata-Mata", "📅 Calendário", "🥇 Ranking"]
+)
+
+# ──────────────────────────────────────────────────────────────────────────────
+# ABA 1: CHAVES E BRASIL
+# ──────────────────────────────────────────────────────────────────────────────
 with aba_grupos:
-    st.markdown("## 📊 Definição da Fase de Grupos")
-    
-    if dados_usuario["travado"]:
-        st.markdown('<div class="status-travado">🔒 Palpites validados e salvos no sistema. Boa sorte, cuzão!</div>', unsafe_allow_html=True)
-        
-    palpites_fase_grupos = {}
-    
+    if modo_view_only:
+        st.markdown(
+            f'<div class="view-banner">👁 Modo visualização — faça login com seu PIN para editar</div>',
+            unsafe_allow_html=True
+        )
+    elif dados_usuario["travado"]:
+        st.markdown(
+            '<div class="status-travado">🔒 Palpites travados! Boa sorte, cuzão! 🍀</div>',
+            unsafe_allow_html=True
+        )
+    else:
+        st.markdown(
+            '<div class="status-editando">✏️ Editando — defina a classificação de cada grupo e trave antes do 1º jogo!</div>',
+            unsafe_allow_html=True
+        )
+
+    travado_ou_view = dados_usuario["travado"] or modo_view_only
+    palpites_grupos = {}
+
+    st.markdown("## 📊 Classificação dos Grupos")
+
     for nome_grupo, lista_times in GRUPOS_CONFIG.items():
         st.markdown(f'<div class="group-card">', unsafe_allow_html=True)
         st.markdown(f'<div class="group-header">{nome_grupo}</div>', unsafe_allow_html=True)
-        
-        ordem_atual = dados_usuario["classificacao"][nome_grupo]
-        
-        if dados_usuario["travado"]:
-            # Exibição estática caso o usuário já tenha efetuado o commit de segurança
-            st.markdown(f"**1º:** {ordem_atual[0]} | **2º:** {ordem_atual[1]} | **3º:** {ordem_atual[2]} | **4º:** {ordem_atual[3]}")
-            palpites_fase_grupos[nome_grupo] = ordem_atual
+
+        ordem = list(dados_usuario["classificacao"].get(nome_grupo, lista_times))
+        # Garante que todos os times do grupo estejam na ordem (migração de dados antigos)
+        for t in lista_times:
+            if t not in ordem:
+                ordem.append(t)
+        ordem = [t for t in ordem if t in lista_times]
+
+        if travado_ou_view:
+            st.markdown(
+                f"🥇 **{ordem[0]}** &nbsp;|&nbsp; 🥈 **{ordem[1]}** &nbsp;|&nbsp; "
+                f"🥉 {ordem[2]} &nbsp;|&nbsp; ❌ {ordem[3]}",
+                unsafe_allow_html=True
+            )
+            palpites_grupos[nome_grupo] = ordem
         else:
-            # INTERFACE INTUITIVA COM TROCA AUTOMÁTICA (SWAP) SEM ERROS
             col1, col2 = st.columns(2)
-            
-            # 1º Colocado (Pode escolher qualquer um dos 4)
-            t1 = col1.selectbox("🥇 1º Colocado", lista_times, index=lista_times.index(ordem_atual[0]), key=f"t1_{nome_grupo}")
-            
-            # Se o usuário escolheu para 1º o time que estava em 2º ou 3º, faz a troca automática
-            if t1 != ordem_atual[0]:
-                antigo_1 = ordem_atual[0]
-                idx_duplicado = ordem_atual.index(t1)
-                ordem_atual[0] = t1
-                ordem_atual[idx_duplicado] = antigo_1
+
+            t1 = col1.selectbox("🥇 1º", lista_times,
+                                index=lista_times.index(ordem[0]),
+                                key=f"t1_{nome_grupo}")
+            if t1 != ordem[0]:
+                idx = ordem.index(t1)
+                ordem[idx] = ordem[0]
+                ordem[0] = t1
+                dados_usuario["classificacao"][nome_grupo] = ordem
                 st.rerun()
 
-            # 2º Colocado
             opcoes_2 = [t for t in lista_times if t != t1]
-            t2 = col2.selectbox("🥈 2º Colocado", opcoes_2, index=opcoes_2.index(ordem_atual[1]), key=f"t2_{nome_grupo}")
-            
-            if t2 != ordem_atual[1]:
-                antigo_2 = ordem_atual[1]
-                idx_duplicado = ordem_atual.index(t2)
-                ordem_atual[1] = t2
-                ordem_atual[idx_duplicado] = antigo_2
+            t2 = col2.selectbox("🥈 2º", opcoes_2,
+                                index=opcoes_2.index(ordem[1]) if ordem[1] in opcoes_2 else 0,
+                                key=f"t2_{nome_grupo}")
+            if t2 != ordem[1]:
+                idx = ordem.index(t2)
+                ordem[idx] = ordem[1]
+                ordem[1] = t2
+                dados_usuario["classificacao"][nome_grupo] = ordem
                 st.rerun()
 
-            # 3º Colocado
             opcoes_3 = [t for t in lista_times if t != t1 and t != t2]
-            t3 = col1.selectbox("🥉 3º Colocado", opcoes_3, index=opcoes_3.index(ordem_atual[2]), key=f"t3_{nome_grupo}")
-            
-            if t3 != ordem_atual[2]:
-                antigo_3 = ordem_atual[2]
-                idx_duplicado = ordem_atual.index(t3)
-                ordem_atual[2] = t3
-                ordem_atual[idx_duplicado] = antigo_3
+            t3 = col1.selectbox("🥉 3º", opcoes_3,
+                                index=opcoes_3.index(ordem[2]) if ordem[2] in opcoes_3 else 0,
+                                key=f"t3_{nome_grupo}")
+            if t3 != ordem[2]:
+                idx = ordem.index(t3)
+                ordem[idx] = ordem[2]
+                ordem[2] = t3
+                dados_usuario["classificacao"][nome_grupo] = ordem
                 st.rerun()
-            
-            # 4º Colocado é o que sobrou
-            t4 = [t for t in lista_times if t != t1 and t != t2 and t != t3][0]
-            ordem_atual[3] = t4
-            col2.markdown(f"<p style='margin-top:25px; font-size:14px; color:#64748b;'>❌ 4º: {t4}</p>", unsafe_allow_html=True)
-            
-            palpites_fase_grupos[nome_grupo] = [t1, t2, t3, t4]
-            
-        st.markdown('</div>', unsafe_allow_html=True)
 
+            t4 = [t for t in lista_times if t not in [t1, t2, t3]][0]
+            ordem[3] = t4
+            col2.markdown(f"<p style='margin-top:28px;font-size:13px;color:#94a3b8;'>❌ 4º: {t4}</p>",
+                          unsafe_allow_html=True)
+            dados_usuario["classificacao"][nome_grupo] = [t1, t2, t3, t4]
+            palpites_grupos[nome_grupo] = [t1, t2, t3, t4]
 
-    # Seção exclusiva da Seleção Brasileira (Chave C)
-    st.markdown("## 🇧🇷 Placar dos Jogos do Brasil (Grupo C)")
-    palpites_gols_brasil = []
-    
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # ── Jogos do Brasil ──
+    st.markdown("## 🇧🇷 Jogos do Brasil — Grupo C")
+
+    palpites_gols = list(dados_usuario["placar_brasil"])
+
     for idx, jogo_info in enumerate(JOGOS_BRASIL):
-        st.markdown(f"**{jogo_info['jogo']}**")
-        st.caption(f"🗓️ {jogo_info['data']} - 🏟️ {jogo_info['loc']}")
-        
-        c_br, c_adv = st.columns(2)
-        base_idx = idx * 2
-        
-        gols_br = c_br.number_input("Gols Brasil", min_value=0, max_value=20, value=dados_usuario["placar_brasil"][base_idx], step=1, key=f"g_br_{idx}", disabled=dados_usuario["travado"])
-        gols_adv = c_adv.number_input("Gols Adv", min_value=0, max_value=20, value=dados_usuario["placar_brasil"][base_idx+1], step=1, key=f"g_adv_{idx}", disabled=dados_usuario["travado"])
-        
-        palpites_gols_brasil.extend([gols_br, gols_adv])
+        st.markdown(f'<div class="group-card">', unsafe_allow_html=True)
+        st.markdown(f'<div class="group-header-br">🗓 {jogo_info["jogo"]} — {jogo_info["data"]} {jogo_info["hora"]}</div>',
+                    unsafe_allow_html=True)
+        st.caption(f"📍 {jogo_info['loc']}")
 
-    # Mecanismo da Trava de Segurança Unilateral ("Tem certeza cuzão?")
-    if not dados_usuario["travado"]:
+        b = idx * 2
+        c1, c2 = st.columns(2)
+        g_br  = c1.number_input("Gols Brasil", min_value=0, max_value=20,
+                                value=int(dados_usuario["placar_brasil"][b]),
+                                step=1, key=f"gbr_{idx}",
+                                disabled=travado_ou_view)
+        g_adv = c2.number_input("Gols Adversário", min_value=0, max_value=20,
+                                value=int(dados_usuario["placar_brasil"][b + 1]),
+                                step=1, key=f"gadv_{idx}",
+                                disabled=travado_ou_view)
+        palpites_gols[b]     = g_br
+        palpites_gols[b + 1] = g_adv
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # ── Trava ──
+    if not travado_ou_view:
         st.write("---")
-        if st.button("🚨 SALVAR PALPITES DEFINITIVOS"):
-            st.session_state.disparar_trava = True
-            
-        if st.session_state.get("disparar_trava", False):
-            st.markdown("""
-                <div class="cuzao-box">
-                    <p class="cuzao-title">⚠️ ATENÇÃO - SEGURANÇA MÁXIMA</p>
-                    <p style="color: #334155; font-size: 14px; font-weight: bold;">Tem certeza cuzão? Não vai mais poder editar nada depois disso.</p>
-                </div>
-            """, unsafe_allow_html=True)
-            
-            col_sim, col_nao = st.columns(2)
-            if col_sim.button("🔥 SIM, TENHO CERTEZA"):
-                dados_usuario["classificacao"] = {g: list(palpites_fase_grupos[g]) for g in GRUPOS_CONFIG.keys()}
-                dados_usuario["placar_brasil"] = palpites_gols_brasil
-                dados_usuario["travado"] = True
-                
-                # ENVIA OS DADOS PARA A PLANILHA DO GOOGLE
-                salvar_dados_sheets(usuario_atual, dados_usuario)
-                
-                st.session_state.disparar_trava = False
-                st.success("Palpites bloqueados com sucesso!")
+
+        chave_trava = f"disparar_trava_{usuario_selecionado}"
+        if chave_trava not in st.session_state:
+            st.session_state[chave_trava] = False
+
+        if not st.session_state[chave_trava]:
+            if st.button("🚨 Salvar palpites definitivos", key="btn_salvar"):
+                st.session_state[chave_trava] = True
                 st.rerun()
-                
-            if col_nao.button("🔒 NÃO, QUERO REVISAR"):
-                st.session_state.disparar_trava = False
+        else:
+            st.markdown("""
+            <div class="cuzao-box">
+                <p class="cuzao-title">⚠️ Tem certeza, cuzão?</p>
+                <p class="cuzao-sub">Depois disso não dá pra editar mais nada. Juro.</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+            col_sim, col_nao = st.columns(2)
+            if col_sim.button("🔥 Sim, quero travar!", key="btn_sim"):
+                # Dupla verificação: re-lê o banco antes de gravar
+                banco_atual = carregar_banco()
+                if banco_atual[usuario_selecionado]["travado"]:
+                    st.warning("Seus palpites já estavam travados. Nenhuma alteração feita.")
+                else:
+                    banco_atual[usuario_selecionado]["classificacao"]  = {g: list(palpites_grupos.get(g, v))
+                                                                           for g, v in GRUPOS_CONFIG.items()}
+                    banco_atual[usuario_selecionado]["placar_brasil"]  = palpites_gols
+                    banco_atual[usuario_selecionado]["travado"]        = True
+                    ok = salvar_banco(banco_atual)
+                    if ok:
+                        st.success("✅ Palpites travados com sucesso! Boa sorte! 🍀")
+                    else:
+                        st.error("Falha ao salvar. Tente novamente.")
+                st.session_state[chave_trava] = False
                 st.rerun()
 
-# ------------------------------------------------------------------------------
-# ABA 2: MATA-MATA (ESTRUTURA COMPLETA COMPILADA E TRAVADA NO BACKEND)
-# ------------------------------------------------------------------------------
+            if col_nao.button("❌ Não, quero revisar", key="btn_nao"):
+                st.session_state[chave_trava] = False
+                st.rerun()
+
+# ──────────────────────────────────────────────────────────────────────────────
+# ABA 2: MATA-MATA
+# ──────────────────────────────────────────────────────────────────────────────
 with aba_matamata:
     st.markdown("## 🌳 Chaveamento do Mata-Mata")
-    
+
     if not MATA_MATA_LIBERADO:
-        st.info("🔒 Aba bloqueada para edição. Os confrontos estarão disponíveis assim que o chaveamento real da Copa de 2026 for consolidado.")
-        
-    st.markdown("### Configuração das Oitavas de Final (Simulação Visual)")
-    
-    # Renderização estática da árvore de chaveamento montada a partir dos dados do GE
-    for conf in MATA_MATA_CONFRONTOS:
-        st.markdown(f'<div class="group-card">', unsafe_allow_html=True)
-        st.markdown(f"**Confronto {conf['id']}**")
-        
-        # O parâmetro disabled=True assegura que os amigos vejam o design visual completo sem poder alterar nada precocemente
-        selecionado = st.radio(
-            "Quem avança de fase?",
-            options=[conf["t1"], conf["t2"]],
-            key=f"radio_{conf['id']}",
-            disabled=True
-        )
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.info("🔒 Esta aba ficará disponível após o encerramento da fase de grupos e a definição oficial do chaveamento real da Copa 2026.")
+        st.markdown("### Prévia dos confrontos (baseado no chaveamento fixo)")
 
-# ==============================================================================
-# 3. BANCO DE DADOS E PERSISTÊNCIA (Nuvem Oficial com JSONBin.io)
-# ==============================================================================
-import json
-import requests
+    col_mm1, col_mm2 = st.columns(2)
+    for i, conf in enumerate(MATA_MATA_CONFRONTOS):
+        col = col_mm1 if i % 2 == 0 else col_mm2
+        with col:
+            st.markdown(f'<div class="mm-card"><div class="mm-id">Confronto {conf["id"]}</div>'
+                        f'<div class="mm-times">{conf["t1"]} vs {conf["t2"]}</div></div>',
+                        unsafe_allow_html=True)
 
-# Função de segurança: garante que todos os amigos existam na base de dados (Evita KeyError)
-def obter_banco_padrao():
-    banco = {}
-    for amigo in AMIGOS:
-        banco[amigo] = {
-            "travado": False,
-            "classificacao": {g: list(teams) for g, teams in GRUPOS_CONFIG.items()},
-            "placar_brasil": [0, 0, 0, 0, 0, 0],
-            "vencedores_mata_mata": {c["id"]: "" for c in MATA_MATA_CONFRONTOS}
-        }
-    return banco
+            vencedor_atual = dados_usuario["vencedores_mata_mata"].get(conf["id"], "")
+            opcoes_mm = ["— escolher —", conf["t1"], conf["t2"]]
+            idx_atual  = opcoes_mm.index(vencedor_atual) if vencedor_atual in opcoes_mm else 0
 
-def carregar_dados():
-    banco_seguro = obter_banco_padrao()
-    try:
-        bin_id = st.secrets.get("JSONBIN_ID")
-        api_key = st.secrets.get("JSONBIN_KEY")
-        
-        # Se as chaves ainda não estiverem no Streamlit, roda liso na memória local
-        if not bin_id or not api_key:
-            return banco_seguro
-            
-        url = f"https://api.jsonbin.io/v3/b/{bin_id}"
-        headers = {"X-Master-Key": api_key}
-        
-        req = requests.get(url, headers=headers, timeout=5)
-        if req.status_code == 200:
-            dados_nuvem = req.json().get("record", {})
-            
-            # Atualiza o banco seguro APENAS com os amigos que já salvaram na nuvem
-            for amigo in AMIGOS:
-                if amigo in dados_nuvem:
-                    banco_seguro[amigo]["travado"] = dados_nuvem[amigo].get("travado", False)
-                    banco_seguro[amigo]["classificacao"] = dados_nuvem[amigo].get("classificacao", banco_seguro[amigo]["classificacao"])
-                    banco_seguro[amigo]["placar_brasil"] = dados_nuvem[amigo].get("placar_brasil", banco_seguro[amigo]["placar_brasil"])
-                    banco_seguro[amigo]["vencedores_mata_mata"] = dados_nuvem[amigo].get("vencedores_mata_mata", banco_seguro[amigo]["vencedores_mata_mata"])
-                    
-        return banco_seguro
-    except Exception:
-        # Se a internet cair, carrega o banco padrão sem quebrar a tela
-        return banco_seguro
+            st.radio(
+                "Quem avança?",
+                options=opcoes_mm,
+                index=idx_atual,
+                key=f"mm_{conf['id']}",
+                disabled=(not MATA_MATA_LIBERADO) or travado_ou_view,
+                label_visibility="collapsed"
+            )
 
-def salvar_dados(amigo_nome, novos_dados):
-    try:
-        # Atualiza a memória local instantaneamente
-        st.session_state.banco_palpites[amigo_nome] = novos_dados
-        banco_atual = st.session_state.banco_palpites
-        
-        bin_id = st.secrets.get("JSONBIN_ID")
-        api_key = st.secrets.get("JSONBIN_KEY")
-        
-        if bin_id and api_key:
-            url = f"https://api.jsonbin.io/v3/b/{bin_id}"
-            headers = {
-                "Content-Type": "application/json",
-                "X-Master-Key": api_key
-            }
-            # Empurra os dados para a nuvem
-            requests.put(url, json=banco_atual, headers=headers)
-    except Exception as e:
-        st.error("Erro de conexão ao salvar na nuvem, mas seu palpite está na memória!")
+# ──────────────────────────────────────────────────────────────────────────────
+# ABA 3: CALENDÁRIO
+# ──────────────────────────────────────────────────────────────────────────────
+with aba_calendario:
+    st.markdown("## 📅 Calendário da Copa 2026")
 
-# Inicialização síncrona
-if "banco_palpites" not in st.session_state:
-    st.session_state.banco_palpites = carregar_dados()
+    st.markdown(f'<div class="fonte-dados">Fonte: {api_data["fonte"]}</div>', unsafe_allow_html=True)
 
-banco_palpites = st.session_state.banco_palpites
-
-# ------------------------------------------------------------------------------
-# ABA 4: RANKING, CRITÉRIOS DE PONTUAÇÃO E GAMIFICAÇÃO COM BADGES
-# ------------------------------------------------------------------------------
-with aba_ranking:
-    st.markdown("## 🥇 Classificação Geral dos Amigos")
-    
-    dados_tabela_ranking = []
-    
-    for amigo in AMIGOS:
-        user_info = st.session_state.banco_palpites[amigo]
-        pontuacao_total = 0
-        acertou_placar_em_cheio = False
-        errou_absolutamente_tudo = True
-        
-        if user_info["travado"]:
-            # 1. Validação de Pontos da Fase de Grupos (2 pts por posição correta)
-            for g in GRUPOS_CONFIG.keys():
-                if user_info["classificacao"][g][0] == api_data["classificacao_real"][g][0]:
-                    pontuacao_total += 2
-                if user_info["classificacao"][g][1] == api_data["classificacao_real"][g][1]:
-                    pontuacao_total += 2
-                    
-            # 2. Validação de Pontos da Seleção Brasileira
-            for i in range(3):
-                base = i * 2
-                p_br, p_adv = user_info["placar_brasil"][base], user_info["placar_brasil"][base+1]
-                r_br, r_adv = api_data["gols_reais_brasil"][base], api_data["gols_reais_brasil"][base+1]
-                
-                # Regra: Placar Exato em cheio = 5 pontos
-                if p_br == r_br and p_adv == r_adv:
-                    pontuacao_total += 5
-                    acertou_placar_em_cheio = True
-                    errou_absolutamente_tudo = False
-                # Regra: Acerto de vencedor ou empate (tendência do jogo) = 3 pontos
-                elif (p_br > p_adv and r_br > r_adv) or (p_br < p_adv and r_br < r_adv) or (p_br == p_adv and r_br == r_adv):
-                    pontuacao_total += 3
-                    errou_absolutamente_tudo = False
-        else:
-            # Penalidade temporária ou pontuação zerada se não efetuou o travamento
-            pontuacao_total = 0
-            errou_absolutamente_tudo = False
-            
-        # Atribuição da lógica de Gamificação por Badges Dinâmicas
-        lista_badges = []
-        if user_info["travado"] and acertou_placar_em_cheio:
-            lista_badges.append("🔮 O Profeta")
-        if user_info["travado"] and errou_absolutamente_tudo:
-            lista_badges.append("🤡 Zica do Rolê")
-        if not user_info["travado"]:
-            lista_badges.append("⏳ Editando...")
-            
-        dados_tabela_ranking.append({
-            "Amigo": amigo,
-            "Pontuação": pontuacao_total,
-            "🏅 Conquistas / Badges": " | ".join(lista_badges) if lista_badges else "🏃 Em jogo",
-            "Segurança": "🔒 Travado" if user_info["travado"] else "🔓 Aberto"
+    # Filtros
+    col_f1, col_f2 = st.columns([1, 1])
+    with col_f1:
+        filtro_brasil = st.toggle("🇧🇷 Só jogos do Brasil", value=False, key="filtro_br")
+    with col_f2:
+        grupos_disponiveis = sorted({
+            j["jogo"].split(" x ")[0].strip() for j in CALENDARIO_FIXO
         })
-        
-    # Ordenação do Dataframe por pontuação decrescente
-    df_ranking = pd.DataFrame(dados_tabela_ranking).sort_values(by="Pontuação", ascending=False).reset_index(drop=True)
-    
-    # Injeção das Badges Supremas (Líder e Lanterna) baseado nas posições relativas
-    if len(df_ranking) > 0 and df_ranking.loc[0, "Pontuação"] > 0:
-        df_ranking.loc[0, "🏅 Conquistas / Badges"] = "👑 [LÍDER] " + df_ranking.loc[0, "🏅 Conquistas / Badges"]
-        idx_ultimo = len(df_ranking) - 1
-        if df_ranking.loc[idx_ultimo, "Pontuação"] < df_ranking.loc[0, "Pontuação"]:
-            df_ranking.loc[idx_ultimo, "🏅 Conquistas / Badges"] = "🔦 [Lanterna] " + df_ranking.loc[idx_ultimo, "🏅 Conquistas / Badges"]
-            
-    # Renderização da Tabela Otimizada para Visualização Mobile
-    st.dataframe(
-        df_ranking,
-        column_config={
-            "Amigo": st.column_config.TextColumn("Nome"),
-            "Pontuação": st.column_config.NumberColumn("PTS 🎯"),
-            "🏅 Conquistas / Badges": st.column_config.TextColumn("Badges"),
-            "Segurança": st.column_config.TextColumn("Status")
-        },
-        hide_index=True,
-        use_container_width=True
-    )
+        filtro_sel = st.selectbox("Filtrar por seleção:", ["Todas"] + sorted({
+            t for j in CALENDARIO_FIXO for t in j["jogo"].replace(" x ", "|").split("|")
+        }), key="filtro_sel")
+
+    jogos_exibir = CALENDARIO_FIXO
+    if filtro_brasil:
+        jogos_exibir = [j for j in jogos_exibir if j["brasil"]]
+    if filtro_sel != "Todas":
+        jogos_exibir = [j for j in jogos_exibir if filtro_sel in j["jogo"]]
+
+    # Agrupar por data
+    datas = []
+    for j in jogos_exibir:
+        if j["data"] not in datas:
+            datas.append(j["data"])
+
+    for data in datas:
+        st.markdown(f'<div class="data-header">📆 {data}</div>', unsafe_allow_html=True)
+        jogos_data = [j for j in jogos_exibir if j["data"] == data]
+        for j in jogos_data:
+            status = _status_jogo(j["data"], j["hora"])
+            brasil_class = "jogo-brasil" if j["brasil"] else ""
+            if status == "finalizado":
+                badge = '<span class="badge-finalizado">✓ Finalizado</span>'
+            elif status == "aovivo":
+                badge = '<span class="badge-aovivo">🔴 Ao vivo</span>'
+            else:
+                badge = '<span class="badge-previsto">Previsto</span>'
+
+            st.markdown(f"""
+            <div class="jogo-card {brasil_class}">
+                <div class="jogo-data">{j["data"]}</div>
+                <div class="jogo-hora">{j["hora"]}</div>
+                <div>
+                    <div class="jogo-nome">{j["jogo"]}</div>
+                    <div class="jogo-local">📍 {j["local"]}</div>
+                </div>
+                {badge}
+            </div>
+            """, unsafe_allow_html=True)
+
+# ──────────────────────────────────────────────────────────────────────────────
+# ABA 4: RANKING
+# ──────────────────────────────────────────────────────────────────────────────
+with aba_ranking:
+    st.markdown("## 🥇 Ranking Geral")
+
+    # Regras de pontuação
+    with st.expander("📋 Regras de pontuação"):
+        st.markdown("""
+        <div class="regra-box">
+            <div class="regra-item">🥇 1º colocado correto no grupo: <strong>+2 pts</strong></div>
+            <div class="regra-item">🥈 2º colocado correto no grupo: <strong>+2 pts</strong></div>
+            <div class="regra-item">⚽ Placar exato do Brasil: <strong>+5 pts</strong></div>
+            <div class="regra-item">✅ Vencedor/empate correto (Brasil): <strong>+3 pts</strong></div>
+            <div class="regra-item">🔒 Palpite não travado: <strong>0 pts</strong> (até travar)</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # Monta tabela
+    linhas = []
+    qualquer_jogo_realizado = any(g is not None for g in api_data["gols_brasil"])
+
+    for amigo in AMIGOS:
+        user   = st.session_state.banco[amigo]
+        total, detalhes = _calcular_pontuacao(amigo)
+        travado = user["travado"]
+
+        badges = []
+        if travado:
+            # Verifica acerto de placar exato
+            acertou_placar = any(
+                user["placar_brasil"][i * 2]     == api_data["gols_brasil"][i * 2] and
+                user["placar_brasil"][i * 2 + 1] == api_data["gols_brasil"][i * 2 + 1] and
+                api_data["gols_brasil"][i * 2] is not None
+                for i in range(3)
+            )
+            # Verifica se errou tudo (apenas se algum jogo já ocorreu)
+            errou_tudo = qualquer_jogo_realizado and total == 0
+
+            if acertou_placar:
+                badges.append("🔮 Profeta")
+            if errou_tudo:
+                badges.append("🤡 Zica")
+
+        linhas.append({
+            "amigo":   amigo,
+            "total":   total,
+            "travado": travado,
+            "badges":  badges,
+            "detalhes": detalhes,
+        })
+
+    # Ordena: travados primeiro, depois por pontuação
+    linhas.sort(key=lambda x: (-int(x["travado"]), -x["total"]))
+
+    # Adiciona badges de posição
+    if len(linhas) > 0:
+        travados_com_pts = [l for l in linhas if l["travado"] and l["total"] > 0]
+        if travados_com_pts:
+            linhas[0]["badges"].insert(0, "👑 Líder")
+            if len(travados_com_pts) > 1:
+                linhas[-1]["badges"].append("🔦 Lanterna")
+
+    posicao_icons = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣", "6️⃣"]
+
+    for i, linha in enumerate(linhas):
+        cor_borda = ""
+        if i == 0 and linha["total"] > 0:
+            cor_borda = "border: 2px solid #1d4ed8;"
+
+        badge_str  = " | ".join(linha["badges"]) if linha["badges"] else ("⏳ Aguardando início" if not qualquer_jogo_realizado else "🏃 Em jogo")
+        status_str = "🔒 Travado" if linha["travado"] else "🔓 Editando"
+        pts_color  = "#1e3a5f" if linha["total"] > 0 else "#94a3b8"
+
+        st.markdown(f"""
+        <div class="rank-row" style="{cor_borda}">
+            <div class="rank-pos">{posicao_icons[i]}</div>
+            <div style="flex:1">
+                <div class="rank-nome">{linha["amigo"]}</div>
+                <div class="rank-badges">{badge_str}</div>
+                <div class="{'rank-status-lock' if linha['travado'] else 'rank-status-open'}">{status_str}</div>
+            </div>
+            <div>
+                <div class="rank-pts" style="color:{pts_color}">{linha["total"]}</div>
+                <div class="rank-pts-label">pts</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    if not qualquer_jogo_realizado:
+        st.info("⏳ A pontuação começa a ser calculada após o primeiro jogo da Copa.")
+
+    # Detalhamento por amigo (expander)
+    st.markdown("---")
+    st.markdown("### Detalhamento por amigo")
+    for linha in linhas:
+        if linha["travado"] and linha["detalhes"]:
+            with st.expander(f"{linha['amigo']} — {linha['total']} pts"):
+                for cat, pts in linha["detalhes"]:
+                    st.markdown(f"- **{cat}**: {pts} pts")
+        elif not linha["travado"]:
+            with st.expander(f"{linha['amigo']} — palpite em aberto"):
+                st.caption("Ainda não travou os palpites.")
