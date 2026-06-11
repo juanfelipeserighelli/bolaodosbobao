@@ -164,9 +164,10 @@ if "banco_palpites" not in st.session_state:
 # Atalho para simplificar as chamadas no restante do código existente
 banco_palpites = st.session_state.banco_palpites
 # ==============================================================================
-# 4. CONSUMO DE RESULTADOS REAIS (Sistema Híbrido: Zafronix + Fallback Sportmonks)
+# 4. CONSUMO DE RESULTADOS REAIS (Sistema Híbrido com Calendário Completo)
 # ==============================================================================
 import requests
+from datetime import datetime
 
 # Dicionário de Tradução para bater com os nomes das chaves do GE
 TRADUCAO_TIMES = {
@@ -187,111 +188,186 @@ TRADUCAO_TIMES = {
 def traduzir(nome_api):
     return TRADUCAO_TIMES.get(nome_api, nome_api)
 
-@st.cache_data(ttl=900)  # Atualiza rigorosamente a cada 10 minutos após o término ou durante os jogos
+@st.cache_data(ttl=600)
 def obter_resultados_reais_api():
-    # Fallback estático de segurança total caso AMBAS as APIs falhem simultaneamente
+    # PLANO B: Calendário Oficial Completo Caso as APIs falhem ou estejam em manutenção
     dados_padrao = {
         "classificacao_real": {g: list(teams) for g, teams in GRUPOS_CONFIG.items()},
         "gols_reais_brasil": [0, 0, 0, 0, 0, 0],
-        "calendario_jogos": [{"data": "11/06", "hora": "16h", "jogo": "México x África do Sul", "local": "Cidade do México"}]
+        "calendario_jogos": [
+            # --- 11 de Junho ---
+            {"data": "11/06", "hora": "16h", "jogo": "México x África do Sul", "local": "Cidade do México"},
+            {"data": "11/06", "hora": "23h", "jogo": "República da Coreia x Tchéquia", "local": "Guadalajara"},
+            # --- 12 de Junho ---
+            {"data": "12/06", "hora": "16h", "jogo": "Canadá x Bósnia e Herzegovina", "local": "Toronto"},
+            {"data": "12/06", "hora": "22h", "jogo": "Estados Unidos x Paraguai", "local": "Los Angeles"},
+            # --- 13 de Junho ---
+            {"data": "13/06", "hora": "16h", "jogo": "Catar x Suíça", "local": "San Francisco"},
+            {"data": "13/06", "hora": "19h", "jogo": "Brasil x Marrocos", "local": "Nova York/NJ"},
+            {"data": "13/06", "hora": "22h", "jogo": "Haiti x Escócia", "local": "Boston"},
+            # --- 14 de Junho ---
+            {"data": "14/06", "hora": "01h", "jogo": "Austrália x Turquia", "local": "Vancouver"},
+            {"data": "14/06", "hora": "14h", "jogo": "Alemanha x Curaçao", "local": "Houston"},
+            {"data": "14/06", "hora": "17h", "jogo": "Países Baixos x Japão", "local": "Dallas"},
+            {"data": "14/06", "hora": "20h", "jogo": "Costa do Marfim x Equador", "local": "Filadélfia"},
+            {"data": "14/06", "hora": "23h", "jogo": "Suécia x Tunísia", "local": "Monterrey"},
+            # --- 15 de Junho ---
+            {"data": "15/06", "hora": "13h", "jogo": "Espanha x Cabo Verde", "local": "Atlanta"},
+            {"data": "15/06", "hora": "16h", "jogo": "Bélgica x Egito", "local": "Seattle"},
+            {"data": "15/06", "hora": "19h", "jogo": "Arábia Saudita x Uruguai", "local": "Miami"},
+            {"data": "15/06", "hora": "22h", "jogo": "Irã x Nova Zelândia", "local": "Los Angeles"},
+            # --- 16 de Junho ---
+            {"data": "16/06", "hora": "16h", "jogo": "França x Senegal", "local": "Nova York/NJ"},
+            {"data": "16/06", "hora": "19h", "jogo": "Iraque x Noruega", "local": "Boston"},
+            {"data": "16/06", "hora": "22h", "jogo": "Argentina x Argélia", "local": "Kansas City"},
+            # --- 17 de Junho ---
+            {"data": "17/06", "hora": "01h", "jogo": "Áustria x Jordânia", "local": "San Francisco"},
+            {"data": "17/06", "hora": "14h", "jogo": "Portugal x RD Congo", "local": "Houston"},
+            {"data": "17/06", "hora": "17h", "jogo": "Inglaterra x Croácia", "local": "Dallas"},
+            {"data": "17/06", "hora": "20h", "jogo": "Gana x Panamá", "local": "Toronto"},
+            {"data": "17/06", "hora": "23h", "jogo": "Uzbequistão x Colômbia", "local": "Cidade do México"},
+            # --- 18 de Junho ---
+            {"data": "18/06", "hora": "13h", "jogo": "Tchéquia x África do Sul", "local": "Atlanta"},
+            {"data": "18/06", "hora": "16h", "jogo": "Suíça x Bósnia e Herzegovina", "local": "Los Angeles"},
+            {"data": "18/06", "hora": "19h", "jogo": "Canadá x Catar", "local": "Vancouver"},
+            {"data": "18/06", "hora": "22h", "jogo": "México x República da Coreia", "local": "Guadalajara"},
+            # --- 19 de Junho ---
+            {"data": "19/06", "hora": "16h", "jogo": "Estados Unidos x Austrália", "local": "Seattle"},
+            {"data": "19/06", "hora": "19h", "jogo": "Escócia x Marrocos", "local": "Boston"},
+            {"data": "19/06", "hora": "21h30", "jogo": "Brasil x Haiti", "local": "Filadélfia"},
+            # --- 20 de Junho ---
+            {"data": "20/06", "hora": "00h", "jogo": "Turquia x Paraguai", "local": "San Francisco"},
+            {"data": "20/06", "hora": "14h", "jogo": "Países Baixos x Suécia", "local": "Houston"},
+            {"data": "20/06", "hora": "17h", "jogo": "Alemanha x Costa do Marfim", "local": "Toronto"},
+            {"data": "20/06", "hora": "21h", "jogo": "Equador x Curaçao", "local": "Kansas City"},
+            # --- 21 de Junho ---
+            {"data": "21/06", "hora": "01h", "jogo": "Tunísia x Japão", "local": "Monterrey"},
+            {"data": "21/06", "hora": "13h", "jogo": "Espanha x Arábia Saudita", "local": "Atlanta"},
+            {"data": "21/06", "hora": "16h", "jogo": "Bélgica x Irã", "local": "Los Angeles"},
+            {"data": "21/06", "hora": "19h", "jogo": "Uruguai x Cabo Verde", "local": "Miami"},
+            {"data": "21/06", "hora": "22h", "jogo": "Nova Zelândia x Egito", "local": "Vancouver"},
+            # --- 22 de Junho ---
+            {"data": "22/06", "hora": "14h", "jogo": "Argentina x Áustria", "local": "Dallas"},
+            {"data": "22/06", "hora": "18h", "jogo": "França x Iraque", "local": "Filadélfia"},
+            {"data": "22/06", "hora": "21h", "jogo": "Noruega x Senegal", "local": "Nova York/NJ"},
+            # --- 23 de Junho ---
+            {"data": "23/06", "hora": "00h", "jogo": "Jordânia x Argélia", "local": "San Francisco"},
+            {"data": "23/06", "hora": "14h", "jogo": "Portugal x Uzbequistão", "local": "Houston"},
+            {"data": "23/06", "hora": "17h", "jogo": "Inglaterra x Gana", "local": "Boston"},
+            {"data": "23/06", "hora": "20h", "jogo": "Panamá x Croácia", "local": "Toronto"},
+            {"data": "23/06", "hora": "23h", "jogo": "Colômbia x RD Congo", "local": "Guadalajara"},
+            # --- 24 de Junho ---
+            {"data": "24/06", "hora": "16h", "jogo": "Suíça x Canadá", "local": "Vancouver"},
+            {"data": "24/06", "hora": "16h", "jogo": "Bósnia e Herzegovina x Catar", "local": "Seattle"},
+            {"data": "24/06", "hora": "19h", "jogo": "Escócia x Brasil", "local": "Miami"},
+            {"data": "24/06", "hora": "19h", "jogo": "Marrocos x Haiti", "local": "Atlanta"},
+            {"data": "24/06", "hora": "22h", "jogo": "Tchéquia x México", "local": "Cidade do México"},
+            {"data": "24/06", "hora": "22h", "jogo": "África do Sul x República da Coreia", "local": "Monterrey"},
+            # --- 25 de Junho ---
+            {"data": "25/06", "hora": "17h", "jogo": "Equador x Alemanha", "local": "Nova York/NJ"},
+            {"data": "25/06", "hora": "17h", "jogo": "Curaçao x Costa do Marfim", "local": "Filadélfia"},
+            {"data": "25/06", "hora": "20h", "jogo": "Japão x Suécia", "local": "Dallas"},
+            {"data": "25/06", "hora": "20h", "jogo": "Tunísia x Países Baixos", "local": "Kansas City"},
+            {"data": "25/06", "hora": "23h", "jogo": "Turquia x Estados Unidos", "local": "Los Angeles"},
+            {"data": "25/06", "hora": "23h", "jogo": "Paraguai x Austrália", "local": "San Francisco"},
+            # --- 26 de Junho ---
+            {"data": "26/06", "hora": "16h", "jogo": "Noruega x França", "local": "Boston"},
+            {"data": "26/06", "hora": "16h", "jogo": "Senegal x Iraque", "local": "Toronto"},
+            {"data": "26/06", "hora": "21h", "jogo": "Cabo Verde x Arábia Saudita", "local": "Houston"},
+            {"data": "26/06", "hora": "21h", "jogo": "Uruguai x Espanha", "local": "Guadalajara"},
+            # --- 27 de Junho ---
+            {"data": "27/06", "hora": "00h", "jogo": "Egito x Irã", "local": "Seattle"},
+            {"data": "27/06", "hora": "00h", "jogo": "Nova Zelândia x Bélgica", "local": "Vancouver"},
+            {"data": "27/06", "hora": "18h", "jogo": "Panamá x Inglaterra", "local": "Nova York/NJ"},
+            {"data": "27/06", "hora": "18h", "jogo": "Croácia x Gana", "local": "Filadélfia"},
+            {"data": "27/06", "hora": "20h30", "jogo": "Colômbia x Portugal", "local": "Miami"},
+            {"data": "27/06", "hora": "20h30", "jogo": "RD Congo x Uzbequistão", "local": "Atlanta"},
+            {"data": "27/06", "hora": "23h", "jogo": "Argélia x Áustria", "local": "Kansas City"},
+            {"data": "27/06", "hora": "23h", "jogo": "Jordânia x Argentina", "local": "Dallas"}
+        ]
     }
     
-    # --- PROVEDOR 1: ZAFRONIX SPORTS API (Principal) ---
+    # --- PROVEDOR 1: ZAFRONIX SPORTS API ---
     try:
         headers_zafronix = {"X-API-Key": "zwc_free_85be12c14621f2117b7dae7f"}
-        # Requisição oficial para os jogos de 2026 na Zafronix
         response = requests.get("https://api.zafronix.com/fifa/worldcup/v1/tournaments/2026/fixtures", headers=headers_zafronix, timeout=5)
         
         if response.status_code == 200:
             data = response.json()
-            calendario = []
-            gols_br = [0, 0, 0, 0, 0, 0]
-            idx_br = 0
-            
-            for match in data.get("fixtures", []):
-                time_c = traduzir(match["home_team"])
-                time_f = traduzir(match["away_team"])
+            fixtures_list = data.get("fixtures", [])
+            if len(fixtures_list) > 0:
+                calendario = []
+                gols_br = [0, 0, 0, 0, 0, 0]
+                idx_br = 0
                 
-                g_c = match.get("home_score")
-                g_f = match.get("away_score")
-                placar = f" {g_c} x {g_f} " if g_c is not None else " x "
-                
-                calendario.append({
-                    "data": datetime.strptime(match["date"], "%Y-%m-%d").strftime("%d/%m"),
-                    "hora": match["time"][:5],
-                    "jogo": f"{time_c}{placar}{time_f}",
-                    "local": match.get("venue", "Estádio")
-                })
-                
-                # Captura gols do Brasil para o ranking
-                if (time_c == "Brasil" or time_f == "Brasil") and match.get("status") == "FINISHED" and idx_br < 3:
-                    gols_br[idx_br*2] = int(g_c) if time_c == "Brasil" else int(g_f)
-                    gols_br[idx_br*2+1] = int(g_f) if time_c == "Brasil" else int(g_c)
-                    idx_br += 1
-            
-            if len(calendario) > 0:
-                # Se rodou perfeito e trouxe dados, mata a função aqui e retorna
-                return {
-                    "classificacao_real": dados_padrao["classificacao_real"], # Atualiza dinamicamente por tabela se necessário
-                    "gols_reais_brasil": gols_br,
-                    "calendario_jogos": calendario
-                }
-    except Exception:
-        pass # Falhou silenciosamente, vai disparar o Provedor 2 de contingência
-        
-    # --- PROVEDOR 2: SPORTMONKS FOOTBALL API (Contingência / Fallback 10 min) ---
-    try:
-        token_sportmonks = "Sdy1n1ctP5Q0ovO9NkVPZ5ey8Pfxqg2dRYRCmJl8lqjuk2MWw9ADP9ctWOUm"
-        url_sm = f"https://api.sportmonks.com/v3/football/fixtures?api_token={token_sportmonks}&include=participants"
-        response = requests.get(url_sm, timeout=5)
-        
-        if response.status_code == 200:
-            data = response.json()
-            calendario = []
-            gols_br = [0, 0, 0, 0, 0, 0]
-            idx_br = 0
-            
-            for match in data.get("data", []):
-                # Filtragem interna apenas para os jogos da Copa do Mundo (Mundial)
-                if match.get("league_id") == 1 or "World Cup" in str(match):
-                    participants = match.get("participants", [])
-                    if len(participants) < 2: continue
-                    
-                    time_c = traduzir(participants[0]["name"])
-                    time_f = traduzir(participants[1]["name"])
-                    
-                    # Verifica placares nos scores da Sportmonks
-                    scores = match.get("scores", {})
-                    g_c = scores.get("localteam_score")
-                    g_f = scores.get("visitorteam_score")
+                for match in fixtures_list:
+                    time_c = traduzir(match["home_team"])
+                    time_f = traduzir(match["away_team"])
+                    g_c = match.get("home_score")
+                    g_f = match.get("away_score")
                     placar = f" {g_c} x {g_f} " if g_c is not None else " x "
                     
                     calendario.append({
-                        "data": match.get("starting_at", "2026-06-11")[5:10].replace("-", "/"),
-                        "hora": match.get("starting_at", "00:00:00")[11:16],
+                        "data": datetime.strptime(match["date"], "%Y-%m-%d").strftime("%d/%m"),
+                        "hora": match["time"][:5],
                         "jogo": f"{time_c}{placar}{time_f}",
-                        "local": "Arena"
+                        "local": match.get("venue", "Estádio")
                     })
                     
-                    if (time_c == "Brasil" or time_f == "Brasil") and match.get("state") == "ENDED" and idx_br < 3:
+                    if (time_c == "Brasil" or time_f == "Brasil") and match.get("status") == "FINISHED" and idx_br < 3:
                         gols_br[idx_br*2] = int(g_c) if time_c == "Brasil" else int(g_f)
                         gols_br[idx_br*2+1] = int(g_f) if time_c == "Brasil" else int(g_c)
                         idx_br += 1
+                
+                return {"classificacao_real": dados_padrao["classificacao_real"], "gols_reais_brasil": gols_br, "calendario_jogos": calendario}
+    except Exception:
+        pass
+        
+    # --- PROVEDOR 2: SPORTMONKS FOOTBALL API ---
+    try:
+        token_sportmonks = "Sdy1n1ctP5Q0ovO9NkVPZ5ey8Pfxqg2dRYRCmJl8lqjuk2MWw9ADP9ctWOUm"
+        response = requests.get(f"https://api.sportmonks.com/v3/football/fixtures?api_token={token_sportmonks}&include=participants", timeout=5)
+        
+        if response.status_code == 200:
+            data = response.json()
+            fixtures_list = data.get("data", [])
+            if len(fixtures_list) > 0:
+                calendario = []
+                gols_br = [0, 0, 0, 0, 0, 0]
+                idx_br = 0
+                
+                for match in fixtures_list:
+                    if match.get("league_id") == 1 or "World Cup" in str(match):
+                        participants = match.get("participants", [])
+                        if len(participants) < 2: continue
                         
-            if len(calendario) > 0:
-                return {
-                    "classificacao_real": dados_padrao["classificacao_real"],
-                    "gols_reais_brasil": gols_br,
-                    "calendario_jogos": calendario
-                }
+                        time_c = traduzir(participants[0]["name"])
+                        time_f = traduzir(participants[1]["name"])
+                        scores = match.get("scores", {})
+                        g_c = scores.get("localteam_score")
+                        g_f = scores.get("visitorteam_score")
+                        placar = f" {g_c} x {g_f} " if g_c is not None else " x "
+                        
+                        calendario.append({
+                            "data": match.get("starting_at", "2026-06-11")[5:10].replace("-", "/"),
+                            "hora": match.get("starting_at", "00:00:00")[11:16],
+                            "jogo": f"{time_c}{placar}{time_f}",
+                            "local": "Arena"
+                        })
+                        
+                        if (time_c == "Brasil" or time_f == "Brasil") and match.get("state") == "ENDED" and idx_br < 3:
+                            gols_br[idx_br*2] = int(g_c) if time_c == "Brasil" else int(g_f)
+                            gols_br[idx_br*2+1] = int(g_f) if time_c == "Brasil" else int(g_c)
+                            idx_br += 1
+                
+                if len(calendario) > 0:
+                    return {"classificacao_real": dados_padrao["classificacao_real"], "gols_reais_brasil": gols_br, "calendario_jogos": calendario}
     except Exception:
         pass
 
-    # Se a internet cair no servidor ou ambas as APIs estourarem a cota, o app usa o plano B e não cai
     return dados_padrao
 
 api_data = obter_resultados_reais_api()
-
 # ==============================================================================
 # 5. HEADER & ÁREA DE SELEÇÃO DE USUÁRIO
 # ==============================================================================
