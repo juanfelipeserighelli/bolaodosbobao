@@ -371,9 +371,27 @@ api_data = obter_resultados_reais_api()
 # ==============================================================================
 # 5. HEADER & ÁREA DE SELEÇÃO DE USUÁRIO
 # ==============================================================================
-st.markdown("🏆 BOLÃO DO BOBÃO COPA DO MUNDO 2026")
+# ==============================================================================
+st.markdown("🏆 BOLÃO DO BOBÃO COPA DO MUNDO 2026")                     
 usuario_atual = st.selectbox("👤 Identifique-se para palpitar ou visualizar:", AMIGOS)
+
+# 🛡️ TRAVA DE SEGURANÇA MÁXIMA (Força a criação do banco se o Streamlit falhar)
+if "banco_palpites" not in st.session_state:
+    st.session_state.banco_palpites = carregar_dados()
+
+# Se mesmo após carregar os dados, o amigo selecionado não existir na memória (Anti-KeyError):
+if usuario_atual not in st.session_state.banco_palpites:
+    st.warning("⚠️ Reconstruindo base de dados corrompida. Aguarde...")
+    banco_emergencia = obter_banco_padrao()
+    
+    # Mescla o banco de emergência mantendo o que já existia
+    for amigo in AMIGOS:
+        if amigo not in st.session_state.banco_palpites:
+            st.session_state.banco_palpites[amigo] = banco_emergencia[amigo]
+
+# Agora é 100% impossível dar KeyError, a variável é lida com segurança
 dados_usuario = st.session_state.banco_palpites[usuario_atual]
+# ==============================================================================
 
 # Inicialização das abas nativas do Streamlit
 aba_grupos, aba_matamata, aba_calendario, aba_ranking = st.tabs(["📊 Chaves & BR", "🌳 Mata-Mata", "📅 Calendário", "🥇 Classificação"])
