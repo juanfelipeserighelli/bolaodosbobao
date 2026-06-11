@@ -138,6 +138,7 @@ aba_grupos, aba_matamata, aba_calendario, aba_ranking = st.tabs(["📊 Chaves & 
 # ------------------------------------------------------------------------------
 # ABA 1: CLASSIFICAÇÃO DAS CHAVES, SELEÇÃO DO BRASIL E TRAVA DO CUZÃO
 # ------------------------------------------------------------------------------
+"""
 with aba_grupos:
     st.markdown("## 📊 Definição da Fase de Grupos")
     
@@ -146,7 +147,7 @@ with aba_grupos:
         
     palpites_fase_grupos = {}
 
-"""
+
  # Loop dinâmico tratando os 12 grupos extraídos do GE
     for nome_grupo, lista_times in GRUPOS_CONFIG.items():
         st.markdown(f'<div class="group-card">', unsafe_allow_html=True)
@@ -175,7 +176,14 @@ with aba_grupos:
             
         st.markdown('</div>', unsafe_allow_html=True)
 """
-# Loop dinâmico tratando os 12 grupos extraídos do GE
+with aba_grupos:
+    st.markdown("## 📊 Definição da Fase de Grupos")
+    
+    if dados_usuario["travado"]:
+        st.markdown('<div class="status-travado">🔒 Palpites validados e salvos no sistema. Boa sorte, cuzão!</div>', unsafe_allow_html=True)
+        
+    palpites_fase_grupos = {}
+    
     for nome_grupo, lista_times in GRUPOS_CONFIG.items():
         st.markdown(f'<div class="group-card">', unsafe_allow_html=True)
         st.markdown(f'<div class="group-header">{nome_grupo}</div>', unsafe_allow_html=True)
