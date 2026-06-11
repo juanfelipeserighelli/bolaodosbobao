@@ -334,16 +334,28 @@ def _banco_padrao():
     return banco
 
 def carregar_banco():
-    """Sempre busca do JSONBin. Retorna banco completo ou padrão em caso de falha."""
+    """
+    Busca o banco do JSONBin.
+    - Se o bin estiver vazio ou com estrutura antiga, inicializa/completa com padrão.
+    - Retorna banco completo ou padrão em caso de falha de conexão.
+    """
     banco_seguro = _banco_padrao()
     try:
-        bin_id = st.secrets.get("JSONBIN_ID", "")
+        bin_id  = st.secrets.get("JSONBIN_ID", "")
         api_key = st.secrets.get("JSONBIN_KEY", "")
         if not bin_id or not api_key:
             return banco_seguro
+
         resp = requests.get(_jsonbin_url(), headers=_jsonbin_headers(), timeout=6)
+
         if resp.status_code == 200:
             dados = resp.json().get("record", {})
+
+            # Bin vazio ou inicializado com estrutura errada → grava o padrão
+            if not dados or not isinstance(dados, dict) or not any(a in dados for a in AMIGOS):
+                requests.put(_jsonbin_url(), json=banco_seguro, headers=_jsonbin_headers(), timeout=8)
+                return banco_seguro
+
             for amigo in AMIGOS:
                 if amigo in dados:
                     d = dados[amigo]
@@ -351,24 +363,45 @@ def carregar_banco():
                     banco_seguro[amigo]["classificacao"]        = d.get("classificacao",        banco_seguro[amigo]["classificacao"])
                     banco_seguro[amigo]["placar_brasil"]        = d.get("placar_brasil",        banco_seguro[amigo]["placar_brasil"])
                     banco_seguro[amigo]["vencedores_mata_mata"] = d.get("vencedores_mata_mata", banco_seguro[amigo]["vencedores_mata_mata"])
+
+            return banco_seguro
+
+        # HTTP 401 = chave errada; 404 = bin_id errado
+        if resp.status_code in (401, 403):
+            st.warning("⚠️ JSONBin: chave de API inválida. Rodando em modo local (palpites não salvos na nuvem).")
+        elif resp.status_code == 404:
+            st.warning("⚠️ JSONBin: bin não encontrado. Verifique o JSONBIN_ID nos secrets.")
+
+    except requests.exceptions.Timeout:
+        st.warning("⚠️ JSONBin sem resposta (timeout). Rodando com dados locais.")
     except Exception:
         pass
+
     return banco_seguro
 
 def salvar_banco(banco_completo):
-    """Grava o banco completo no JSONBin."""
+    """
+    Grava o banco completo no JSONBin via PUT.
+    Retorna True se bem-sucedido, False caso contrário.
+    """
     try:
         bin_id  = st.secrets.get("JSONBIN_ID", "")
         api_key = st.secrets.get("JSONBIN_KEY", "")
         if not bin_id or not api_key:
+            # Modo offline: só salva na sessão
             st.session_state.banco = banco_completo
             return True
+
         resp = requests.put(_jsonbin_url(), json=banco_completo, headers=_jsonbin_headers(), timeout=8)
         if resp.status_code == 200:
             st.session_state.banco = banco_completo
             return True
+        else:
+            st.error(f"Erro ao salvar (HTTP {resp.status_code}): {resp.text[:200]}")
+    except requests.exceptions.Timeout:
+        st.error("Timeout ao salvar na nuvem. Tente novamente.")
     except Exception as e:
-        st.error(f"Erro ao salvar na nuvem: {e}")
+        st.error(f"Erro ao salvar: {e}")
     return False
 
 # ==============================================================================
