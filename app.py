@@ -146,7 +146,7 @@ with aba_grupos:
         
     palpites_fase_grupos = {}
 
-'''
+"""
  # Loop dinâmico tratando os 12 grupos extraídos do GE
     for nome_grupo, lista_times in GRUPOS_CONFIG.items():
         st.markdown(f'<div class="group-card">', unsafe_allow_html=True)
@@ -174,8 +174,8 @@ with aba_grupos:
             palpites_fase_grupos[nome_grupo] = [t1, t2, t3, t4]
             
         st.markdown('</div>', unsafe_allow_html=True)
-  '''
-    # Loop dinâmico tratando os 12 grupos extraídos do GE
+"""
+# Loop dinâmico tratando os 12 grupos extraídos do GE
     for nome_grupo, lista_times in GRUPOS_CONFIG.items():
         st.markdown(f'<div class="group-card">', unsafe_allow_html=True)
         st.markdown(f'<div class="group-header">{nome_grupo}</div>', unsafe_allow_html=True)
