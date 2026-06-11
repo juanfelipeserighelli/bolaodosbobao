@@ -145,8 +145,9 @@ with aba_grupos:
         st.markdown('<div class="status-travado">🔒 Palpites validados e salvos no sistema. Boa sorte, cuzão!</div>', unsafe_allow_html=True)
         
     palpites_fase_grupos = {}
-    
-'''    # Loop dinâmico tratando os 12 grupos extraídos do GE
+
+'''
+ # Loop dinâmico tratando os 12 grupos extraídos do GE
     for nome_grupo, lista_times in GRUPOS_CONFIG.items():
         st.markdown(f'<div class="group-card">', unsafe_allow_html=True)
         st.markdown(f'<div class="group-header">{nome_grupo}</div>', unsafe_allow_html=True)
