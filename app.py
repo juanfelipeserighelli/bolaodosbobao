@@ -366,7 +366,6 @@ def carregar_banco():
 
             return banco_seguro
 
-        # HTTP 401 = chave errada; 404 = bin_id errado
         if resp.status_code in (401, 403):
             st.warning("⚠️ JSONBin: chave de API inválida. Rodando em modo local (palpites não salvos na nuvem).")
         elif resp.status_code == 404:
@@ -388,7 +387,6 @@ def salvar_banco(banco_completo):
         bin_id  = st.secrets.get("JSONBIN_ID", "")
         api_key = st.secrets.get("JSONBIN_KEY", "")
         if not bin_id or not api_key:
-            # Modo offline: só salva na sessão
             st.session_state.banco = banco_completo
             return True
 
@@ -481,7 +479,6 @@ def _montar_resultado(jogos_reais, fonte):
 def obter_resultados():
     """
     Tenta as 3 APIs em sequência. Se todas falharem, usa calendário fixo.
-    Ordem: 1) football-data.org  2) Zafronix  3) Sportmonks
     """
     padrao = {
         "fonte":              "calendário fixo",
@@ -542,37 +539,37 @@ def obter_resultados():
 
     # ── API 3: Sportmonks Football API ────────────────────────────────────────
     try:
-        token_sm = st.secrets.get("SPORTMONKS_TOKEN", "Sdy1n1ctP5Q0ovO9NkVPZ5ey8Pfxqg2dRYRCmJl8lqjuk2MWw9ADP9ctWOUm")
-        url = f"https://api.sportmonks.com/v3/football/fixtures?api_token={token_sm}&include=participants,scores"
-        r = requests.get(url, timeout=5)
-        if r.status_code == 200:
-            fixtures = r.json().get("data", [])
-            if fixtures:
-                jogos = []
-                for m in fixtures:
-                    participants = m.get("participants", [])
-                    if len(participants) < 2:
-                        continue
-                    t_c = TRADUCAO.get(participants[0].get("name", ""), participants[0].get("name", ""))
-                    t_f = TRADUCAO.get(participants[1].get("name", ""), participants[1].get("name", ""))
-                    scores = m.get("scores", {})
-                    gc  = scores.get("localteam_score")
-                    gf  = scores.get("visitorteam_score")
-                    st_ = m.get("state", {})
-                    state_name = st_.get("name", "") if isinstance(st_, dict) else str(st_)
-                    ended = state_name in ("FT", "ENDED", "AET", "PEN")
-                    jogos.append({
-                        "jogo":     f"{t_c} x {t_f}",
-                        "placar_c": gc,
-                        "placar_f": gf,
-                        "status":   "FINISHED" if ended else "SCHEDULED",
-                    })
-                if jogos:
-                    return _montar_resultado(jogos, "Sportmonks")
+        token_sm = st.secrets.get("SPORTMONKS_TOKEN", "")
+        if token_sm:
+            url = f"https://api.sportmonks.com/v3/football/fixtures?api_token={token_sm}&include=participants,scores"
+            r = requests.get(url, timeout=5)
+            if r.status_code == 200:
+                fixtures = r.json().get("data", [])
+                if fixtures:
+                    jogos = []
+                    for m in fixtures:
+                        participants = m.get("participants", [])
+                        if len(participants) < 2:
+                            continue
+                        t_c = TRADUCAO.get(participants[0].get("name", ""), participants[0].get("name", ""))
+                        t_f = TRADUCAO.get(participants[1].get("name", ""), participants[1].get("name", ""))
+                        scores = m.get("scores", {})
+                        gc  = scores.get("localteam_score")
+                        gf  = scores.get("visitorteam_score")
+                        st_ = m.get("state", {})
+                        state_name = st_.get("name", "") if isinstance(st_, dict) else str(st_)
+                        ended = state_name in ("FT", "ENDED", "AET", "PEN")
+                        jogos.append({
+                            "jogo":     f"{t_c} x {t_f}",
+                            "placar_c": gc,
+                            "placar_f": gf,
+                            "status":   "FINISHED" if ended else "SCHEDULED",
+                        })
+                    if jogos:
+                        return _montar_resultado(jogos, "Sportmonks")
     except Exception:
         pass
 
-    # ── Fallback: calendário fixo ─────────────────────────────────────────────
     return padrao
 
 api_data = obter_resultados()
@@ -617,28 +614,24 @@ def _grupos_com_resultado():
     """
     Retorna um set com os nomes dos grupos que já têm ao menos
     um jogo finalizado segundo os dados da API.
-    Enquanto nenhum jogo ocorreu (ou a API só retornou o calendário fixo),
-    o set fica vazio e nenhum grupo pontua.
     """
     finalizados = set()
     jogos_reais = api_data.get("jogos_reais", [])
     if not jogos_reais:
-        return finalizados  # API não retornou nada real ainda
+        return finalizados
 
     for nome_grupo, times in GRUPOS_CONFIG.items():
         for jogo in jogos_reais:
             if jogo.get("status") != "FINISHED":
                 continue
-            # Verifica se algum dos times do grupo aparece no jogo
             partes = jogo["jogo"].replace(" x ", "|").split("|")
             t_c = partes[0].strip() if len(partes) > 0 else ""
             t_f = partes[1].strip() if len(partes) > 1 else ""
             if t_c in times or t_f in times:
                 finalizados.add(nome_grupo)
-                break  # basta um jogo finalizado neste grupo
+                break
 
     return finalizados
-
 
 def _calcular_pontuacao(amigo):
     """Calcula pontuação de um amigo. Retorna (total, detalhes)."""
@@ -650,13 +643,12 @@ def _calcular_pontuacao(amigo):
     if not user["travado"]:
         return 0, []
 
-    # Grupos com ao menos 1 jogo finalizado — único momento em que pontua
     grupos_ativos = _grupos_com_resultado()
 
     pts_grupos = 0
     for g in GRUPOS_CONFIG:
         if g not in grupos_ativos:
-            continue  # Nenhum jogo deste grupo terminou ainda — não pontua
+            continue
         if user["classificacao"][g][0] == real["classificacao_real"][g][0]:
             pts_grupos += 2
         if user["classificacao"][g][1] == real["classificacao_real"][g][1]:
@@ -664,7 +656,6 @@ def _calcular_pontuacao(amigo):
     total += pts_grupos
     detalhes.append(("Fase de grupos", pts_grupos))
 
-    # Jogos do Brasil — 5 pts placar exato, 3 pts vencedor/empate correto
     pts_brasil = 0
     for i in range(3):
         b     = i * 2
@@ -673,7 +664,7 @@ def _calcular_pontuacao(amigo):
         r_br  = real["gols_brasil"][b]
         r_adv = real["gols_brasil"][b + 1]
         if r_br is None or r_adv is None:
-            continue  # Jogo ainda não ocorreu — não pontua
+            continue
         if p_br == r_br and p_adv == r_adv:
             pts_brasil += 5
         elif (
@@ -691,7 +682,6 @@ def _calcular_pontuacao(amigo):
 # ==============================================================================
 st.markdown("# 🏆 Bolão do Bobão — Copa 2026")
 
-# Countdown
 resultado_countdown = _countdown_brasil()
 if resultado_countdown:
     tempo_str, nome_jogo = resultado_countdown
@@ -722,12 +712,18 @@ if st.session_state.ultimo_usuario != usuario_selecionado:
     st.session_state.tentativas_pin = 0
     st.session_state.ultimo_usuario = usuario_selecionado
 
-# Sempre re-lê o estado REAL deste usuário do banco (garante que trava seja respeitada)
+# Sempre lê o estado do usuário do banco em memória
 dados_usuario = st.session_state.banco[usuario_selecionado]
 
-# Verifica se já está autenticado
-autenticado    = (st.session_state.usuario_autenticado == usuario_selecionado)
-modo_view_only = False   # será True se olhar palpites de outro
+# Verifica autenticação
+autenticado = (st.session_state.usuario_autenticado == usuario_selecionado)
+
+# ── LÓGICA DE MODO ──────────────────────────────────────────────────────────
+# modo_view_only   = True  → usuário NÃO autenticado (não pode editar nem ver PIN)
+# palpite travado  = True  → mesmo autenticado, não pode editar
+# A combinação (view_only=True + travado=True) deve mostrar os palpites normalmente,
+# pois eles são públicos após travados. Só bloqueia a edição.
+modo_view_only = not autenticado
 
 with col_pin:
     if not autenticado:
@@ -741,7 +737,7 @@ with col_pin:
         )
         if pin_input:
             if pin_input == PINS[usuario_selecionado]:
-                # PIN correto — sincroniza com o banco remoto
+                # PIN correto — sincroniza com o banco remoto antes de autenticar
                 banco_fresco = carregar_banco()
                 st.session_state.banco = banco_fresco
                 dados_usuario = st.session_state.banco[usuario_selecionado]
@@ -754,10 +750,6 @@ with col_pin:
     else:
         st.success(f"✅ Olá, {usuario_selecionado}!")
 
-# Se não autenticado, entra em modo somente-leitura
-if not autenticado:
-    modo_view_only = True
-
 # ==============================================================================
 # ABAS
 # ==============================================================================
@@ -769,23 +761,38 @@ aba_grupos, aba_matamata, aba_calendario, aba_ranking = st.tabs(
 # ABA 1: CHAVES E BRASIL
 # ──────────────────────────────────────────────────────────────────────────────
 with aba_grupos:
-    if modo_view_only:
-        st.markdown(
-            f'<div class="view-banner">👁 Modo visualização — faça login com seu PIN para editar</div>',
-            unsafe_allow_html=True
-        )
-    elif dados_usuario["travado"]:
+
+    # ── Banner de status — 4 casos possíveis ──────────────────────────────────
+    if autenticado and dados_usuario["travado"]:
+        # Autenticado + travado → mostra confirmação de travamento
         st.markdown(
             '<div class="status-travado">🔒 Palpites travados! Boa sorte, cuzão! 🍀</div>',
             unsafe_allow_html=True
         )
-    else:
+    elif autenticado and not dados_usuario["travado"]:
+        # Autenticado + ainda editando
         st.markdown(
             '<div class="status-editando">✏️ Editando — defina a classificação de cada grupo e trave antes do 1º jogo!</div>',
             unsafe_allow_html=True
         )
+    elif not autenticado and dados_usuario["travado"]:
+        # Não autenticado, mas palpite já travado → palpites são visíveis (públicos)
+        st.markdown(
+            '<div class="status-travado">🔒 Palpites travados — visualizando como convidado.</div>',
+            unsafe_allow_html=True
+        )
+    else:
+        # Não autenticado + palpite ainda aberto → só mostra aviso de login
+        st.markdown(
+            '<div class="view-banner">👁 Modo visualização — faça login com seu PIN para editar seus palpites</div>',
+            unsafe_allow_html=True
+        )
 
+    # travado_ou_view controla se os widgets ficam disabled / em modo read-only
+    # IMPORTANTE: mesmo sem autenticação, se o palpite está travado os dados
+    # devem ser EXIBIDOS (não escondidos). O flag só bloqueia a edição.
     travado_ou_view = dados_usuario["travado"] or modo_view_only
+
     palpites_grupos = {}
 
     st.markdown("## 📊 Classificação dos Grupos")
@@ -795,18 +802,29 @@ with aba_grupos:
         st.markdown(f'<div class="group-header">{nome_grupo}</div>', unsafe_allow_html=True)
 
         ordem = list(dados_usuario["classificacao"].get(nome_grupo, lista_times))
-        # Preserva a ordem salva; apenas acrescenta times faltantes no final (migração)
+        # Preserva a ordem salva; acrescenta times faltantes no final (migração)
         times_faltando = [t for t in lista_times if t not in ordem]
         ordem = [t for t in ordem if t in lista_times] + times_faltando
 
         if travado_ou_view:
-            st.markdown(
-                f"🥇 **{ordem[0]}** &nbsp;|&nbsp; 🥈 **{ordem[1]}** &nbsp;|&nbsp; "
-                f"🥉 {ordem[2]} &nbsp;|&nbsp; ❌ {ordem[3]}",
-                unsafe_allow_html=True
-            )
+            # ── Modo leitura: exibe a ordem salva ──────────────────────────
+            # Distingue visualmente se o palpite foi travado ou se é padrão
+            if dados_usuario["travado"]:
+                st.markdown(
+                    f"🥇 **{ordem[0]}** &nbsp;|&nbsp; 🥈 **{ordem[1]}** &nbsp;|&nbsp; "
+                    f"🥉 {ordem[2]} &nbsp;|&nbsp; ❌ {ordem[3]}",
+                    unsafe_allow_html=True
+                )
+            else:
+                # Não autenticado e não travado: mostra ordem padrão com aviso
+                st.markdown(
+                    f"<span style='color:#94a3b8;font-size:13px;'>"
+                    f"🔒 Faça login para ver e editar seus palpites</span>",
+                    unsafe_allow_html=True
+                )
             palpites_grupos[nome_grupo] = ordem
         else:
+            # ── Modo edição ────────────────────────────────────────────────
             col1, col2 = st.columns(2)
 
             t1 = col1.selectbox("🥇 1º", lista_times,
@@ -850,7 +868,7 @@ with aba_grupos:
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # ── Jogos do Brasil ──
+    # ── Jogos do Brasil ──────────────────────────────────────────────────────
     st.markdown("## 🇧🇷 Jogos do Brasil — Grupo C")
 
     palpites_gols = list(dados_usuario["placar_brasil"])
@@ -862,21 +880,43 @@ with aba_grupos:
         st.caption(f"📍 {jogo_info['loc']}")
 
         b = idx * 2
-        c1, c2 = st.columns(2)
-        g_br  = c1.number_input("Gols Brasil", min_value=0, max_value=20,
-                                value=int(dados_usuario["placar_brasil"][b]),
-                                step=1, key=f"gbr_{idx}",
-                                disabled=travado_ou_view)
-        g_adv = c2.number_input("Gols Adversário", min_value=0, max_value=20,
-                                value=int(dados_usuario["placar_brasil"][b + 1]),
-                                step=1, key=f"gadv_{idx}",
-                                disabled=travado_ou_view)
-        palpites_gols[b]     = g_br
-        palpites_gols[b + 1] = g_adv
+
+        if travado_ou_view:
+            if dados_usuario["travado"]:
+                # Mostra os placares salvos de forma clara
+                g_br_salvo  = int(dados_usuario["placar_brasil"][b])
+                g_adv_salvo = int(dados_usuario["placar_brasil"][b + 1])
+                st.markdown(
+                    f"<div style='text-align:center; font-size:22px; font-weight:800; "
+                    f"color:#15803d; padding: 8px 0;'>"
+                    f"🇧🇷 Brasil {g_br_salvo} × {g_adv_salvo} Adversário</div>",
+                    unsafe_allow_html=True
+                )
+                palpites_gols[b]     = g_br_salvo
+                palpites_gols[b + 1] = g_adv_salvo
+            else:
+                # Não autenticado e não travado
+                st.markdown(
+                    "<span style='color:#94a3b8;font-size:13px;'>"
+                    "🔒 Faça login para ver e editar seus palpites de placar</span>",
+                    unsafe_allow_html=True
+                )
+        else:
+            # Modo edição normal
+            c1, c2 = st.columns(2)
+            g_br  = c1.number_input("Gols Brasil", min_value=0, max_value=20,
+                                    value=int(dados_usuario["placar_brasil"][b]),
+                                    step=1, key=f"gbr_{idx}")
+            g_adv = c2.number_input("Gols Adversário", min_value=0, max_value=20,
+                                    value=int(dados_usuario["placar_brasil"][b + 1]),
+                                    step=1, key=f"gadv_{idx}")
+            palpites_gols[b]     = g_br
+            palpites_gols[b + 1] = g_adv
+
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # ── Trava ──
-    if not travado_ou_view:
+    # ── Botão de Trava — só aparece se autenticado e ainda não travou ────────
+    if autenticado and not dados_usuario["travado"]:
         st.write("---")
 
         chave_trava = f"disparar_trava_{usuario_selecionado}"
@@ -902,10 +942,12 @@ with aba_grupos:
                 if banco_atual[usuario_selecionado]["travado"]:
                     st.warning("Seus palpites já estavam travados. Nenhuma alteração feita.")
                 else:
-                    banco_atual[usuario_selecionado]["classificacao"]  = {g: list(palpites_grupos.get(g, v))
-                                                                           for g, v in GRUPOS_CONFIG.items()}
-                    banco_atual[usuario_selecionado]["placar_brasil"]  = palpites_gols
-                    banco_atual[usuario_selecionado]["travado"]        = True
+                    banco_atual[usuario_selecionado]["classificacao"] = {
+                        g: list(palpites_grupos.get(g, v))
+                        for g, v in GRUPOS_CONFIG.items()
+                    }
+                    banco_atual[usuario_selecionado]["placar_brasil"] = palpites_gols
+                    banco_atual[usuario_selecionado]["travado"]       = True
                     ok = salvar_banco(banco_atual)
                     if ok:
                         st.success("✅ Palpites travados com sucesso! Boa sorte! 🍀")
@@ -945,7 +987,7 @@ with aba_matamata:
                 options=opcoes_mm,
                 index=idx_atual,
                 key=f"mm_{conf['id']}",
-                disabled=(not MATA_MATA_LIBERADO) or travado_ou_view,
+                disabled=(not MATA_MATA_LIBERADO) or dados_usuario["travado"] or modo_view_only,
                 label_visibility="collapsed"
             )
 
@@ -957,14 +999,10 @@ with aba_calendario:
 
     st.markdown(f'<div class="fonte-dados">Fonte: {api_data["fonte"]}</div>', unsafe_allow_html=True)
 
-    # Filtros
     col_f1, col_f2 = st.columns([1, 1])
     with col_f1:
         filtro_brasil = st.toggle("🇧🇷 Só jogos do Brasil", value=False, key="filtro_br")
     with col_f2:
-        grupos_disponiveis = sorted({
-            j["jogo"].split(" x ")[0].strip() for j in CALENDARIO_FIXO
-        })
         filtro_sel = st.selectbox("Filtrar por seleção:", ["Todas"] + sorted({
             t for j in CALENDARIO_FIXO for t in j["jogo"].replace(" x ", "|").split("|")
         }), key="filtro_sel")
@@ -975,7 +1013,6 @@ with aba_calendario:
     if filtro_sel != "Todas":
         jogos_exibir = [j for j in jogos_exibir if filtro_sel in j["jogo"]]
 
-    # Agrupar por data
     datas = []
     for j in jogos_exibir:
         if j["data"] not in datas:
@@ -1012,7 +1049,6 @@ with aba_calendario:
 with aba_ranking:
     st.markdown("## 🥇 Ranking Geral")
 
-    # Regras de pontuação
     with st.expander("📋 Regras de pontuação"):
         st.markdown("""
         <div class="regra-box">
@@ -1024,7 +1060,6 @@ with aba_ranking:
         </div>
         """, unsafe_allow_html=True)
 
-    # Monta tabela
     linhas = []
     qualquer_jogo_realizado = any(g is not None for g in api_data["gols_brasil"])
 
@@ -1035,14 +1070,12 @@ with aba_ranking:
 
         badges = []
         if travado:
-            # Verifica acerto de placar exato
             acertou_placar = any(
                 user["placar_brasil"][i * 2]     == api_data["gols_brasil"][i * 2] and
                 user["placar_brasil"][i * 2 + 1] == api_data["gols_brasil"][i * 2 + 1] and
                 api_data["gols_brasil"][i * 2] is not None
                 for i in range(3)
             )
-            # Verifica se errou tudo (apenas se algum jogo já ocorreu)
             errou_tudo = qualquer_jogo_realizado and total == 0
 
             if acertou_placar:
@@ -1051,17 +1084,15 @@ with aba_ranking:
                 badges.append("🤡 Zica")
 
         linhas.append({
-            "amigo":   amigo,
-            "total":   total,
-            "travado": travado,
-            "badges":  badges,
+            "amigo":    amigo,
+            "total":    total,
+            "travado":  travado,
+            "badges":   badges,
             "detalhes": detalhes,
         })
 
-    # Ordena: travados primeiro, depois por pontuação
     linhas.sort(key=lambda x: (-int(x["travado"]), -x["total"]))
 
-    # Adiciona badges de posição
     if len(linhas) > 0:
         travados_com_pts = [l for l in linhas if l["travado"] and l["total"] > 0]
         if travados_com_pts:
@@ -1098,7 +1129,6 @@ with aba_ranking:
     if not qualquer_jogo_realizado:
         st.info("⏳ A pontuação começa a ser calculada após o primeiro jogo da Copa.")
 
-    # Detalhamento por amigo (expander)
     st.markdown("---")
     st.markdown("### Detalhamento por amigo")
     for linha in linhas:
