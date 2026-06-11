@@ -188,7 +188,7 @@ TRADUCAO_TIMES = {
 def traduzir(nome_api):
     return TRADUCAO_TIMES.get(nome_api, nome_api)
 
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=900)
 def obter_resultados_reais_api():
     # PLANO B: Calendário Oficial Completo Caso as APIs falhem ou estejam em manutenção
     dados_padrao = {
@@ -518,24 +518,79 @@ with aba_matamata:
         )
         st.markdown('</div>', unsafe_allow_html=True)
 
-# ------------------------------------------------------------------------------
-# ABA 3: CALENDÁRIO DIÁRIO COMPILADO VIA API DE DADOS
-# ------------------------------------------------------------------------------
-with aba_calendario:
-    st.markdown("## 📅 Cronograma Oficial de Jogos")
-    st.caption("Resultados atualizados de forma síncrona a cada requisição de página.")
-    st.write("---")
-    
-    # Agrupamento e exibição linear por data para leitura fluida no Android Chrome
-    for jogo in api_data["calendario_jogos"]:
-        col_meta, col_partida = st.columns([1, 2])
-        with col_meta:
-            st.markdown(f"📅 **{jogo['data']}**")
-            st.caption(f"⏰ {jogo['hora']}")
-        with col_partida:
-            st.markdown(f"🏟️ *{jogo['local']}*")
-            st.markdown(f"👉 **{jogo['jogo']}**")
-        st.markdown("<hr style='margin: 8px 0; opacity: 0.2;'>", unsafe_allow_html=True)
+# ==============================================================================
+# 3. BANCO DE DADOS E PERSISTÊNCIA (Nuvem Oficial com JSONBin.io)
+# ==============================================================================
+import json
+import requests
+
+# Função de segurança: garante que todos os amigos existam na base de dados (Evita KeyError)
+def obter_banco_padrao():
+    banco = {}
+    for amigo in AMIGOS:
+        banco[amigo] = {
+            "travado": False,
+            "classificacao": {g: list(teams) for g, teams in GRUPOS_CONFIG.items()},
+            "placar_brasil": [0, 0, 0, 0, 0, 0],
+            "vencedores_mata_mata": {c["id"]: "" for c in MATA_MATA_CONFRONTOS}
+        }
+    return banco
+
+def carregar_dados():
+    banco_seguro = obter_banco_padrao()
+    try:
+        bin_id = st.secrets.get("JSONBIN_ID")
+        api_key = st.secrets.get("JSONBIN_KEY")
+        
+        # Se as chaves ainda não estiverem no Streamlit, roda liso na memória local
+        if not bin_id or not api_key:
+            return banco_seguro
+            
+        url = f"https://api.jsonbin.io/v3/b/{bin_id}"
+        headers = {"X-Master-Key": api_key}
+        
+        req = requests.get(url, headers=headers, timeout=5)
+        if req.status_code == 200:
+            dados_nuvem = req.json().get("record", {})
+            
+            # Atualiza o banco seguro APENAS com os amigos que já salvaram na nuvem
+            for amigo in AMIGOS:
+                if amigo in dados_nuvem:
+                    banco_seguro[amigo]["travado"] = dados_nuvem[amigo].get("travado", False)
+                    banco_seguro[amigo]["classificacao"] = dados_nuvem[amigo].get("classificacao", banco_seguro[amigo]["classificacao"])
+                    banco_seguro[amigo]["placar_brasil"] = dados_nuvem[amigo].get("placar_brasil", banco_seguro[amigo]["placar_brasil"])
+                    banco_seguro[amigo]["vencedores_mata_mata"] = dados_nuvem[amigo].get("vencedores_mata_mata", banco_seguro[amigo]["vencedores_mata_mata"])
+                    
+        return banco_seguro
+    except Exception:
+        # Se a internet cair, carrega o banco padrão sem quebrar a tela
+        return banco_seguro
+
+def salvar_dados(amigo_nome, novos_dados):
+    try:
+        # Atualiza a memória local instantaneamente
+        st.session_state.banco_palpites[amigo_nome] = novos_dados
+        banco_atual = st.session_state.banco_palpites
+        
+        bin_id = st.secrets.get("JSONBIN_ID")
+        api_key = st.secrets.get("JSONBIN_KEY")
+        
+        if bin_id and api_key:
+            url = f"https://api.jsonbin.io/v3/b/{bin_id}"
+            headers = {
+                "Content-Type": "application/json",
+                "X-Master-Key": api_key
+            }
+            # Empurra os dados para a nuvem
+            requests.put(url, json=banco_atual, headers=headers)
+    except Exception as e:
+        st.error("Erro de conexão ao salvar na nuvem, mas seu palpite está na memória!")
+
+# Inicialização síncrona
+if "banco_palpites" not in st.session_state:
+    st.session_state.banco_palpites = carregar_dados()
+
+banco_palpites = st.session_state.banco_palpites
 
 # ------------------------------------------------------------------------------
 # ABA 4: RANKING, CRITÉRIOS DE PONTUAÇÃO E GAMIFICAÇÃO COM BADGES
