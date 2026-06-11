@@ -138,44 +138,6 @@ aba_grupos, aba_matamata, aba_calendario, aba_ranking = st.tabs(["📊 Chaves & 
 # ------------------------------------------------------------------------------
 # ABA 1: CLASSIFICAÇÃO DAS CHAVES, SELEÇÃO DO BRASIL E TRAVA DO CUZÃO
 # ------------------------------------------------------------------------------
-"""
-with aba_grupos:
-    st.markdown("## 📊 Definição da Fase de Grupos")
-    
-    if dados_usuario["travado"]:
-        st.markdown('<div class="status-travado">🔒 Palpites validados e salvos no sistema. Boa sorte, cuzão!</div>', unsafe_allow_html=True)
-        
-    palpites_fase_grupos = {}
-
-
- # Loop dinâmico tratando os 12 grupos extraídos do GE
-    for nome_grupo, lista_times in GRUPOS_CONFIG.items():
-        st.markdown(f'<div class="group-card">', unsafe_allow_html=True)
-        st.markdown(f'<div class="group-header">{nome_grupo}</div>', unsafe_allow_html=True)
-        
-        if dados_usuario["travado"]:
-            # Exibição estática caso o usuário já tenha efetuado o commit de segurança
-            ordem_salva = dados_usuario["classificacao"][nome_grupo]
-            st.markdown(f"**1º:** {ordem_salva[0]} | **2º:** {ordem_salva[1]} | **3º:** {ordem_salva[2]} | **4º:** {ordem_salva[3]}")
-            palpites_fase_grupos[nome_grupo] = ordem_salva
-        else:
-            # Inputs intuitivos sequenciais para ordenação em telas Mobile touch
-            col1, col2 = st.columns(2)
-            t1 = col1.selectbox("🥇 1º Colocado", lista_times, index=lista_times.index(dados_usuario["classificacao"][nome_grupo][0]), key=f"t1_{nome_grupo}")
-            
-            restantes_1 = [t for t in lista_times if t != t1]
-            t2 = col2.selectbox("🥈 2º Colocado", restantes_1, index=restantes_1.index(dados_usuario["classificacao"][nome_grupo][1]), key=f"t2_{nome_grupo}")
-            
-            restantes_2 = [t for t in restantes_1 if t != t2]
-            t3 = col1.selectbox("🥉 3º Colocado", restantes_2, index=restantes_2.index(dados_usuario["classificacao"][nome_grupo][2]), key=f"t3_{nome_grupo}")
-            
-            t4 = [t for t in restantes_2 if t != t3][0]
-            col2.markdown(f"<p style='margin-top:25px; font-size:14px; color:#64748b;'>❌ 4º: {t4}</p>", unsafe_allow_html=True)
-            
-            palpites_fase_grupos[nome_grupo] = [t1, t2, t3, t4]
-            
-        st.markdown('</div>', unsafe_allow_html=True)
-"""
 with aba_grupos:
     st.markdown("## 📊 Definição da Fase de Grupos")
     
