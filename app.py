@@ -58,7 +58,7 @@ GRUPOS_CONFIG = {
     "Grupo B": ["Bósnia e Herzegovina", "Canadá", "Catar", "Suíça"],
     "Grupo C": ["Brasil", "Haiti", "Marrocos", "Escócia"],
     "Grupo D": ["Austrália", "Paraguai", "Turquia", "Estados Unidos da América"],
-    "Grupo E": ["Curaçao", "Equador", "Alemanha", "Cote D'Ivoire"],
+    "Grupo E": ["Curaçao", "Equador", "Alemanha", "Costa do Marfim"],
     "Grupo F": ["Japão", "Países Baixos", "Suécia", "Tunísia"],
     "Grupo G": ["Bélgica", "Egito", "República Islâmica do Irã", "Nova Zelândia"],
     "Grupo H": ["Cabo Verde", "Arábia Saudita", "Espanha", "Uruguai"],
@@ -146,7 +146,7 @@ with aba_grupos:
         
     palpites_fase_grupos = {}
     
-    # Loop dinâmico tratando os 12 grupos extraídos do GE
+'''    # Loop dinâmico tratando os 12 grupos extraídos do GE
     for nome_grupo, lista_times in GRUPOS_CONFIG.items():
         st.markdown(f'<div class="group-card">', unsafe_allow_html=True)
         st.markdown(f'<div class="group-header">{nome_grupo}</div>', unsafe_allow_html=True)
@@ -173,7 +173,65 @@ with aba_grupos:
             palpites_fase_grupos[nome_grupo] = [t1, t2, t3, t4]
             
         st.markdown('</div>', unsafe_allow_html=True)
+  '''
+    # Loop dinâmico tratando os 12 grupos extraídos do GE
+    for nome_grupo, lista_times in GRUPOS_CONFIG.items():
+        st.markdown(f'<div class="group-card">', unsafe_allow_html=True)
+        st.markdown(f'<div class="group-header">{nome_grupo}</div>', unsafe_allow_html=True)
         
+        ordem_atual = dados_usuario["classificacao"][nome_grupo]
+        
+        if dados_usuario["travado"]:
+            # Exibição estática caso o usuário já tenha efetuado o commit de segurança
+            st.markdown(f"**1º:** {ordem_atual[0]} | **2º:** {ordem_atual[1]} | **3º:** {ordem_atual[2]} | **4º:** {ordem_atual[3]}")
+            palpites_fase_grupos[nome_grupo] = ordem_atual
+        else:
+            # INTERFACE INTUITIVA COM TROCA AUTOMÁTICA (SWAP) SEM ERROS
+            col1, col2 = st.columns(2)
+            
+            # 1º Colocado (Pode escolher qualquer um dos 4)
+            t1 = col1.selectbox("🥇 1º Colocado", lista_times, index=lista_times.index(ordem_atual[0]), key=f"t1_{nome_grupo}")
+            
+            # Se o usuário escolheu para 1º o time que estava em 2º ou 3º, faz a troca automática
+            if t1 != ordem_atual[0]:
+                antigo_1 = ordem_atual[0]
+                idx_duplicado = ordem_atual.index(t1)
+                ordem_atual[0] = t1
+                ordem_atual[idx_duplicado] = antigo_1
+                st.rerun()
+
+            # 2º Colocado
+            opcoes_2 = [t for t in lista_times if t != t1]
+            t2 = col2.selectbox("🥈 2º Colocado", opcoes_2, index=opcoes_2.index(ordem_atual[1]), key=f"t2_{nome_grupo}")
+            
+            if t2 != ordem_atual[1]:
+                antigo_2 = ordem_atual[1]
+                idx_duplicado = ordem_atual.index(t2)
+                ordem_atual[1] = t2
+                ordem_atual[idx_duplicado] = antigo_2
+                st.rerun()
+
+            # 3º Colocado
+            opcoes_3 = [t for t in lista_times if t != t1 and t != t2]
+            t3 = col1.selectbox("🥉 3º Colocado", opcoes_3, index=opcoes_3.index(ordem_atual[2]), key=f"t3_{nome_grupo}")
+            
+            if t3 != ordem_atual[2]:
+                antigo_3 = ordem_atual[2]
+                idx_duplicado = ordem_atual.index(t3)
+                ordem_atual[2] = t3
+                ordem_atual[idx_duplicado] = antigo_3
+                st.rerun()
+            
+            # 4º Colocado é o que sobrou
+            t4 = [t for t in lista_times if t != t1 and t != t2 and t != t3][0]
+            ordem_atual[3] = t4
+            col2.markdown(f"<p style='margin-top:25px; font-size:14px; color:#64748b;'>❌ 4º: {t4}</p>", unsafe_allow_html=True)
+            
+            palpites_fase_grupos[nome_grupo] = [t1, t2, t3, t4]
+            
+        st.markdown('</div>', unsafe_allow_html=True)
+
+
     # Seção exclusiva da Seleção Brasileira (Chave C)
     st.markdown("## 🇧🇷 Placar dos Jogos do Brasil (Grupo C)")
     palpites_gols_brasil = []
