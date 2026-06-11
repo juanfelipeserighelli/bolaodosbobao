@@ -795,11 +795,9 @@ with aba_grupos:
         st.markdown(f'<div class="group-header">{nome_grupo}</div>', unsafe_allow_html=True)
 
         ordem = list(dados_usuario["classificacao"].get(nome_grupo, lista_times))
-        # Garante que todos os times do grupo estejam na ordem (migração de dados antigos)
-        for t in lista_times:
-            if t not in ordem:
-                ordem.append(t)
-        ordem = [t for t in ordem if t in lista_times]
+        # Preserva a ordem salva; apenas acrescenta times faltantes no final (migração)
+        times_faltando = [t for t in lista_times if t not in ordem]
+        ordem = [t for t in ordem if t in lista_times] + times_faltando
 
         if travado_ou_view:
             st.markdown(
