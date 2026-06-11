@@ -7,7 +7,7 @@ from datetime import datetime
 # 1. CONFIGURAÇÕES DA PÁGINA (Design Premium Otimizado para Chrome Mobile)
 # ==============================================================================
 st.set_page_config(
-    page_title="Bolão Copa 2026",
+    page_title="Bolão do Bobão Copa 2026",
     page_icon="⚽",
     layout="centered",
     initial_sidebar_state="collapsed"
@@ -128,7 +128,7 @@ api_data = obter_resultados_reais_api()
 # ==============================================================================
 # 5. HEADER & ÁREA DE SELEÇÃO DE USUÁRIO
 # ==============================================================================
-st.markdown("<h1>🏆 BOLÃO COPA DO MUNDO 2026</h1>")
+st.markdown("🏆 BOLÃO DO BOBÃO COPA DO MUNDO 2026")
 usuario_atual = st.selectbox("👤 Identifique-se para palpitar ou visualizar:", AMIGOS)
 dados_usuario = st.session_state.banco_palpites[usuario_atual]
 
