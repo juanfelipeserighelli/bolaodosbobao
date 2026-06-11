@@ -454,59 +454,126 @@ TRADUCAO = {
     "Croatia": "Croácia", "England": "Inglaterra", "Ghana": "Gana", "Panama": "Panamá",
 }
 
+def _montar_resultado(jogos_reais, fonte):
+    """Constrói o dict de retorno padrão a partir de uma lista de jogos processados."""
+    gols_brasil = [None, None, None, None, None, None]
+    idx_br = 0
+    for j in jogos_reais:
+        if j["status"] == "FINISHED" and idx_br < 3:
+            nome = j["jogo"]
+            gc, gf = j["placar_c"], j["placar_f"]
+            if nome.startswith("Brasil"):
+                gols_brasil[idx_br * 2]     = gc
+                gols_brasil[idx_br * 2 + 1] = gf
+                idx_br += 1
+            elif " x Brasil" in nome or nome.endswith("Brasil"):
+                gols_brasil[idx_br * 2]     = gf
+                gols_brasil[idx_br * 2 + 1] = gc
+                idx_br += 1
+    return {
+        "fonte":             fonte,
+        "classificacao_real": {g: list(t) for g, t in GRUPOS_CONFIG.items()},
+        "jogos_reais":       jogos_reais,
+        "gols_brasil":       gols_brasil,
+    }
+
 @st.cache_data(ttl=600)
 def obter_resultados():
-    """Tenta football-data.org. Devolve dict com dados reais ou padrão."""
+    """
+    Tenta as 3 APIs em sequência. Se todas falharem, usa calendário fixo.
+    Ordem: 1) football-data.org  2) Zafronix  3) Sportmonks
+    """
     padrao = {
-        "fonte": "calendário fixo",
+        "fonte":              "calendário fixo",
         "classificacao_real": {g: list(t) for g, t in GRUPOS_CONFIG.items()},
-        "jogos_reais": [],   # lista de {jogo, placar_c, placar_f, status}
-        "gols_brasil": [None, None, None, None, None, None],  # None = jogo não ocorreu
+        "jogos_reais":        [],
+        "gols_brasil":        [None, None, None, None, None, None],
     }
+
+    # ── API 1: football-data.org ──────────────────────────────────────────────
     try:
-        token = st.secrets.get("FOOTBALL_DATA_TOKEN", "")
-        if not token:
-            return padrao
-        headers = {"X-Auth-Token": token}
-        # Copa do Mundo 2026 = competition WC (ajustar se a API mudar o código)
-        url = "https://api.football-data.org/v4/competitions/WC/matches?season=2026"
-        r = requests.get(url, headers=headers, timeout=6)
-        if r.status_code != 200:
-            return padrao
-        matches = r.json().get("matches", [])
-        if not matches:
-            return padrao
-        jogos_reais = []
-        gols_brasil = [None, None, None, None, None, None]
-        idx_br = 0
-        for m in matches:
-            t_c = TRADUCAO.get(m["homeTeam"]["name"], m["homeTeam"]["name"])
-            t_f = TRADUCAO.get(m["awayTeam"]["name"], m["awayTeam"]["name"])
-            sc  = m.get("score", {}).get("fullTime", {})
-            gc  = sc.get("home")
-            gf  = sc.get("away")
-            status = m.get("status", "SCHEDULED")
-            jogos_reais.append({
-                "jogo":      f"{t_c} x {t_f}",
-                "placar_c":  gc,
-                "placar_f":  gf,
-                "status":    status,
-            })
-            if status == "FINISHED" and idx_br < 3:
-                if t_c == "Brasil":
-                    gols_brasil[idx_br * 2]     = gc
-                    gols_brasil[idx_br * 2 + 1] = gf
-                    idx_br += 1
-                elif t_f == "Brasil":
-                    gols_brasil[idx_br * 2]     = gf
-                    gols_brasil[idx_br * 2 + 1] = gc
-                    idx_br += 1
-        padrao["fonte"]       = "football-data.org"
-        padrao["jogos_reais"] = jogos_reais
-        padrao["gols_brasil"] = gols_brasil
-        return padrao
+        token = st.secrets.get("FOOTBALL_DATA_TOKEN", "138c14b64cc6494f96eaa6142915c55f")
+        if token:
+            url = "https://api.football-data.org/v4/competitions/WC/matches?season=2026"
+            r = requests.get(url, headers={"X-Auth-Token": token}, timeout=6)
+            if r.status_code == 200:
+                matches = r.json().get("matches", [])
+                if matches:
+                    jogos = []
+                    for m in matches:
+                        t_c    = TRADUCAO.get(m["homeTeam"]["name"], m["homeTeam"]["name"])
+                        t_f    = TRADUCAO.get(m["awayTeam"]["name"], m["awayTeam"]["name"])
+                        sc     = m.get("score", {}).get("fullTime", {})
+                        status = m.get("status", "SCHEDULED")
+                        jogos.append({
+                            "jogo":     f"{t_c} x {t_f}",
+                            "placar_c": sc.get("home"),
+                            "placar_f": sc.get("away"),
+                            "status":   "FINISHED" if status == "FINISHED" else status,
+                        })
+                    return _montar_resultado(jogos, "football-data.org")
     except Exception:
-        return padrao
+        pass
+
+    # ── API 2: Zafronix Sports API ────────────────────────────────────────────
+    try:
+        token_zafronix = st.secrets.get("ZAFRONIX_KEY", "zwc_free_85be12c14621f2117b7dae7f")
+        url = "https://api.zafronix.com/fifa/worldcup/v1/tournaments/2026/fixtures"
+        r = requests.get(url, headers={"X-API-Key": token_zafronix}, timeout=5)
+        if r.status_code == 200:
+            fixtures = r.json().get("fixtures", [])
+            if fixtures:
+                jogos = []
+                for m in fixtures:
+                    t_c = TRADUCAO.get(m.get("home_team", ""), m.get("home_team", ""))
+                    t_f = TRADUCAO.get(m.get("away_team", ""), m.get("away_team", ""))
+                    gc  = m.get("home_score")
+                    gf  = m.get("away_score")
+                    st_ = m.get("status", "SCHEDULED")
+                    jogos.append({
+                        "jogo":     f"{t_c} x {t_f}",
+                        "placar_c": gc,
+                        "placar_f": gf,
+                        "status":   "FINISHED" if st_ == "FINISHED" else st_,
+                    })
+                return _montar_resultado(jogos, "Zafronix Sports API")
+    except Exception:
+        pass
+
+    # ── API 3: Sportmonks Football API ────────────────────────────────────────
+    try:
+        token_sm = st.secrets.get("SPORTMONKS_TOKEN", "Sdy1n1ctP5Q0ovO9NkVPZ5ey8Pfxqg2dRYRCmJl8lqjuk2MWw9ADP9ctWOUm")
+        url = f"https://api.sportmonks.com/v3/football/fixtures?api_token={token_sm}&include=participants,scores"
+        r = requests.get(url, timeout=5)
+        if r.status_code == 200:
+            fixtures = r.json().get("data", [])
+            if fixtures:
+                jogos = []
+                for m in fixtures:
+                    participants = m.get("participants", [])
+                    if len(participants) < 2:
+                        continue
+                    t_c = TRADUCAO.get(participants[0].get("name", ""), participants[0].get("name", ""))
+                    t_f = TRADUCAO.get(participants[1].get("name", ""), participants[1].get("name", ""))
+                    scores = m.get("scores", {})
+                    gc  = scores.get("localteam_score")
+                    gf  = scores.get("visitorteam_score")
+                    st_ = m.get("state", {})
+                    state_name = st_.get("name", "") if isinstance(st_, dict) else str(st_)
+                    ended = state_name in ("FT", "ENDED", "AET", "PEN")
+                    jogos.append({
+                        "jogo":     f"{t_c} x {t_f}",
+                        "placar_c": gc,
+                        "placar_f": gf,
+                        "status":   "FINISHED" if ended else "SCHEDULED",
+                    })
+                if jogos:
+                    return _montar_resultado(jogos, "Sportmonks")
+    except Exception:
+        pass
+
+    # ── Fallback: calendário fixo ─────────────────────────────────────────────
+    return padrao
 
 api_data = obter_resultados()
 
