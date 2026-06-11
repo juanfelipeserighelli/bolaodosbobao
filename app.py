@@ -164,24 +164,131 @@ if "banco_palpites" not in st.session_state:
 # Atalho para simplificar as chamadas no restante do código existente
 banco_palpites = st.session_state.banco_palpites
 # ==============================================================================
-# 4. CONSUMO DE RESULTADOS REAIS SIMULANDO A API (Processado a cada refresh)
+# 4. CONSUMO DE RESULTADOS REAIS (Sistema Híbrido: Zafronix + Fallback Sportmonks)
 # ==============================================================================
-@st.cache_data(ttl=5)  # Atualização dinâmica em tempo real a cada requisição
+import requests
+
+# Dicionário de Tradução para bater com os nomes das chaves do GE
+TRADUCAO_TIMES = {
+    "Brazil": "Brasil", "Haiti": "Haiti", "Morocco": "Marrocos", "Scotland": "Escócia",
+    "Mexico": "México", "South Africa": "África do Sul", "Korea Republic": "República da Coreia", "South Korea": "República da Coreia", "Czech Republic": "Tchéquia", "Czechia": "Tchéquia",
+    "Bosnia and Herzegovina": "Bósnia e Herzegovina", "Canada": "Canadá", "Qatar": "Catar", "Switzerland": "Suíça",
+    "Australia": "Austrália", "Paraguay": "Paraguay", "Turkey": "Turquia", "USA": "Estados Unidos da América", "United States": "Estados Unidos da América",
+    "Curaçao": "Curaçao", "Ecuador": "Equador", "Germany": "Alemanha", "Ivory Coast": "Cote D'Ivoire", "Cote d'Ivoire": "Cote D'Ivoire",
+    "Japan": "Japão", "Netherlands": "Países Baixos", "Sweden": "Suécia", "Tunisia": "Tunísia",
+    "Belgium": "Bélgica", "Egypt": "Egito", "Iran": "República Islâmica do Irã", "New Zealand": "Nova Zelândia",
+    "Cape Verde": "Cabo Verde", "Saudi Arabia": "Arábia Saudita", "Spain": "Espanha", "Uruguay": "Uruguai",
+    "France": "França", "Iraq": "Iraque", "Norway": "Noruega", "Senegal": "Senegal",
+    "Algeria": "Argélia", "Argentina": "Argentina", "Austria": "Áustria", "Jordan": "Jordânia",
+    "Colombia": "Colômbia", "DR Congo": "RD Congo", "Congo DR": "RD Congo", "Portugal": "Portugal", "Uzbekistan": "Uzbequistão",
+    "Croatia": "Croácia", "England": "Inglaterra", "Ghana": "Gana", "Panama": "Panamá"
+}
+
+def traduzir(nome_api):
+    return TRADUCAO_TIMES.get(nome_api, nome_api)
+
+@st.cache_data(ttl=900)  # Atualiza rigorosamente a cada 10 minutos após o término ou durante os jogos
 def obter_resultados_reais_api():
-    # Estrutura espelho contendo os gabaritos oficiais calculados dinamicamente pela API
-    return {
-        "classificacao_real": {g: list(teams) for g, teams in GRUPOS_CONFIG.items()}, # Simulando resultados idênticos
-        "gols_reais_brasil": [3, 1, 2, 0, 1, 1], # Gabarito real dos placares [BR x Marrocos, BR x Haiti...]
-        "calendario_jogos": [
-            {"data": "11 de junho", "hora": "16h", "jogo": "México x África do Sul", "local": "Cidade do México"},
-            {"data": "11 de junho", "hora": "23h", "jogo": "República da Coreia x Tchéquia", "local": "Guadalajara"},
-            {"data": "12 de junho", "hora": "16h", "jogo": "Canadá x Bósnia e Herzegovina", "local": "Toronto"},
-            {"data": "12 de junho", "hora": "22h", "jogo": "Estados Unidos x Paraguai", "local": "Los Angeles"},
-            {"data": "13 de junho", "hora": "16h", "jogo": "Catar x Suíça", "local": "San Francisco"},
-            {"data": "13 de junho", "hora": "19h", "jogo": "Brasil x Marrocos", "local": "Nova York/Nova Jersey"},
-            {"data": "13 de junho", "hora": "22h", "jogo": "Haiti x Escócia", "local": "Boston"}
-        ]
+    # Fallback estático de segurança total caso AMBAS as APIs falhem simultaneamente
+    dados_padrao = {
+        "classificacao_real": {g: list(teams) for g, teams in GRUPOS_CONFIG.items()},
+        "gols_reais_brasil": [0, 0, 0, 0, 0, 0],
+        "calendario_jogos": [{"data": "11/06", "hora": "16h", "jogo": "México x África do Sul", "local": "Cidade do México"}]
     }
+    
+    # --- PROVEDOR 1: ZAFRONIX SPORTS API (Principal) ---
+    try:
+        headers_zafronix = {"X-API-Key": "zwc_free_85be12c14621f2117b7dae7f"}
+        # Requisição oficial para os jogos de 2026 na Zafronix
+        response = requests.get("https://api.zafronix.com/fifa/worldcup/v1/tournaments/2026/fixtures", headers=headers_zafronix, timeout=5)
+        
+        if response.status_code == 200:
+            data = response.json()
+            calendario = []
+            gols_br = [0, 0, 0, 0, 0, 0]
+            idx_br = 0
+            
+            for match in data.get("fixtures", []):
+                time_c = traduzir(match["home_team"])
+                time_f = traduzir(match["away_team"])
+                
+                g_c = match.get("home_score")
+                g_f = match.get("away_score")
+                placar = f" {g_c} x {g_f} " if g_c is not None else " x "
+                
+                calendario.append({
+                    "data": datetime.strptime(match["date"], "%Y-%m-%d").strftime("%d/%m"),
+                    "hora": match["time"][:5],
+                    "jogo": f"{time_c}{placar}{time_f}",
+                    "local": match.get("venue", "Estádio")
+                })
+                
+                # Captura gols do Brasil para o ranking
+                if (time_c == "Brasil" or time_f == "Brasil") and match.get("status") == "FINISHED" and idx_br < 3:
+                    gols_br[idx_br*2] = int(g_c) if time_c == "Brasil" else int(g_f)
+                    gols_br[idx_br*2+1] = int(g_f) if time_c == "Brasil" else int(g_c)
+                    idx_br += 1
+            
+            if len(calendario) > 0:
+                # Se rodou perfeito e trouxe dados, mata a função aqui e retorna
+                return {
+                    "classificacao_real": dados_padrao["classificacao_real"], # Atualiza dinamicamente por tabela se necessário
+                    "gols_reais_brasil": gols_br,
+                    "calendario_jogos": calendario
+                }
+    except Exception:
+        pass # Falhou silenciosamente, vai disparar o Provedor 2 de contingência
+        
+    # --- PROVEDOR 2: SPORTMONKS FOOTBALL API (Contingência / Fallback 10 min) ---
+    try:
+        token_sportmonks = "Sdy1n1ctP5Q0ovO9NkVPZ5ey8Pfxqg2dRYRCmJl8lqjuk2MWw9ADP9ctWOUm"
+        url_sm = f"https://api.sportmonks.com/v3/football/fixtures?api_token={token_sportmonks}&include=participants"
+        response = requests.get(url_sm, timeout=5)
+        
+        if response.status_code == 200:
+            data = response.json()
+            calendario = []
+            gols_br = [0, 0, 0, 0, 0, 0]
+            idx_br = 0
+            
+            for match in data.get("data", []):
+                # Filtragem interna apenas para os jogos da Copa do Mundo (Mundial)
+                if match.get("league_id") == 1 or "World Cup" in str(match):
+                    participants = match.get("participants", [])
+                    if len(participants) < 2: continue
+                    
+                    time_c = traduzir(participants[0]["name"])
+                    time_f = traduzir(participants[1]["name"])
+                    
+                    # Verifica placares nos scores da Sportmonks
+                    scores = match.get("scores", {})
+                    g_c = scores.get("localteam_score")
+                    g_f = scores.get("visitorteam_score")
+                    placar = f" {g_c} x {g_f} " if g_c is not None else " x "
+                    
+                    calendario.append({
+                        "data": match.get("starting_at", "2026-06-11")[5:10].replace("-", "/"),
+                        "hora": match.get("starting_at", "00:00:00")[11:16],
+                        "jogo": f"{time_c}{placar}{time_f}",
+                        "local": "Arena"
+                    })
+                    
+                    if (time_c == "Brasil" or time_f == "Brasil") and match.get("state") == "ENDED" and idx_br < 3:
+                        gols_br[idx_br*2] = int(g_c) if time_c == "Brasil" else int(g_f)
+                        gols_br[idx_br*2+1] = int(g_f) if time_c == "Brasil" else int(g_c)
+                        idx_br += 1
+                        
+            if len(calendario) > 0:
+                return {
+                    "classificacao_real": dados_padrao["classificacao_real"],
+                    "gols_reais_brasil": gols_br,
+                    "calendario_jogos": calendario
+                }
+    except Exception:
+        pass
+
+    # Se a internet cair no servidor ou ambas as APIs estourarem a cota, o app usa o plano B e não cai
+    return dados_padrao
 
 api_data = obter_resultados_reais_api()
 
