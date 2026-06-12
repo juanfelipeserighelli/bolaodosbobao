@@ -765,9 +765,13 @@ def obter_resultados():
         if token:
             url = "https://api.football-data.org/v4/competitions/WC/matches"
             r = requests.get(url, headers={"X-Auth-Token": token}, timeout=6)
-            if r.status_code == 200:
+            if r.status_code != 200:
+                st.warning(f"⚠️ Football-Data retornou HTTP {r.status_code}. Usando dados manuais.")
+            else:
                 matches = r.json().get("matches", [])
-                if matches:
+                if not matches:
+                    st.warning("⚠️ Football-Data retornou sem jogos. Usando dados manuais.")
+                else:
                     jogos = []
                     for m in matches:
                         t_c = _normalizar_time(m["homeTeam"]["name"])
@@ -783,16 +787,11 @@ def obter_resultados():
                             "placar_f": placar_f,
                             "status":   _status_api_para_padrao(status),
                         })
-                    debug = str(st.secrets.get("DEBUG_FOOTBALL_DATA", "")).lower() in ("1", "true", "yes")
-                    if debug:
-                        st.write("Fonte:", "football-data.org")
-                        st.write("Jogos recebidos:", len(jogos))
-                        for j in jogos[:5]:
-                            st.write(j)
+                    st.success(f"✅ Football-Data: {len(jogos)} jogos processados")
                     classificacao_api = _classificacao_football_data(token)
                     return _montar_resultado(jogos, "football-data.org", classificacao_api)
     except Exception as e:
-        st.error(f"Erro football-data: {e}")
+        st.error(f"❌ Erro football-data: {e}")
 
     # ── API 2: Zafronix Sports API ────────────────────────────────────────────
     try:
@@ -1046,6 +1045,20 @@ if resultado_countdown:
         <div class="countdown-game">{nome_jogo} — trave seus palpites antes!</div>
     </div>
     """, unsafe_allow_html=True)
+
+# ── SIDEBAR: Diagnostics ──────────────────────────────────────────────────
+with st.sidebar:
+    with st.expander("🔧 Diagnostics (Debug)"):
+        token_fd = st.secrets.get("FOOTBALL_DATA_TOKEN", "52974ada524e459ea4cf52a9dcc19861")
+        st.write(f"**Token Football-Data:** {token_fd[:10]}...{token_fd[-5:] if len(token_fd) > 15 else ''}")
+        
+        if st.button("🔄 Limpar cache & recarregar"):
+            st.cache_data.clear()
+            st.rerun()
+        
+        st.write(f"**Fonte de dados detectada:** `{api_data.get('fonte', '?')}`")
+        st.write(f"**Gols Brasil da API:** {api_data.get('gols_brasil', [])}")
+        st.write(f"**Jogos processados:** {len(api_data.get('jogos_reais', []))}")
 
 # ── Status da sincronização automática ──────────────────────────────────────
 fonte_dados = api_data.get("fonte", "calendário fixo")
