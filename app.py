@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import json
 import requests
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 # ==============================================================================
 # CONFIGURAÇÃO DA PÁGINA
@@ -227,10 +227,13 @@ MATA_MATA_CONFRONTOS = [
 # Libera aba do mata-mata para edição quando os confrontos reais forem definidos
 MATA_MATA_LIBERADO = False
 
+BRT = timezone(timedelta(hours=-3))
+DURACAO_JOGO_MIN = 110
+
 # Próximo jogo do Brasil para o countdown
 PROXIMO_JOGO_BRASIL = {
     "nome":  "Brasil x Marrocos",
-    "data_hora": datetime(2026, 6, 13, 22, 0, 0, tzinfo=timezone.utc),  # 19h Brasília = 22h UTC
+    "data_hora": datetime(2026, 6, 13, 19, 0, 0, tzinfo=BRT),
 }
 
 # ==============================================================================
@@ -452,14 +455,190 @@ TRADUCAO = {
     "Croatia": "Croácia", "England": "Inglaterra", "Ghana": "Gana", "Panama": "Panamá",
 }
 
-def _montar_resultado(jogos_reais, fonte):
+ALIASES_TIMES = {
+    "Coreia do Sul": "República da Coreia",
+    "República da Coreia": "República da Coreia",
+    "Bósnia": "Bósnia e Herzegovina",
+    "Bósnia e Herzegovina": "Bósnia e Herzegovina",
+    "Bosnia": "Bósnia e Herzegovina",
+    "Bosnia and Herzegovina": "Bósnia e Herzegovina",
+    "USA": "Estados Unidos",
+    "United States": "Estados Unidos",
+    "United States of America": "Estados Unidos",
+    "Czech Republic": "Tchéquia",
+    "Czechia": "Tchéquia",
+}
+
+RESULTADOS_MANUAIS = {
+    # Use quando alguma API demorar a publicar um resultado:
+    # "México x África do Sul": {"placar_c": 0, "placar_f": 0},
+}
+
+def _resultados_manuais():
+    resultados = dict(RESULTADOS_MANUAIS)
+    try:
+        raw = st.secrets.get("RESULTADOS_MANUAIS_JSON", "")
+        if raw:
+            resultados.update(json.loads(raw))
+    except Exception:
+        pass
+    return resultados
+
+def _agora_brt():
+    return datetime.now(BRT)
+
+def _normalizar_time(nome):
+    nome = (nome or "").strip()
+    traduzido = TRADUCAO.get(nome, nome)
+    return ALIASES_TIMES.get(traduzido, traduzido)
+
+def _partes_jogo(nome_jogo):
+    partes = nome_jogo.replace(" x ", "|").split("|")
+    if len(partes) < 2:
+        return "", ""
+    return _normalizar_time(partes[0]), _normalizar_time(partes[1])
+
+def _datetime_jogo_brt(data_str, hora_str):
+    h_num = hora_str.replace("h", ":").rstrip(":")
+    if len(h_num) == 2:
+        h_num = f"{h_num}:00"
+    return datetime.strptime(f"2026/{data_str} {h_num}", "%Y/%d/%m %H:%M").replace(tzinfo=BRT)
+
+def _status_por_data_hora(data_str, hora_str):
+    try:
+        delta = (_agora_brt() - _datetime_jogo_brt(data_str, hora_str)).total_seconds() / 60
+        if delta > DURACAO_JOGO_MIN:
+            return "finalizado"
+        if 0 <= delta <= DURACAO_JOGO_MIN:
+            return "aovivo"
+        return "previsto"
+    except Exception:
+        return "previsto"
+
+def _status_api_para_padrao(status):
+    status = (status or "").upper()
+    if status in ("FINISHED", "FT", "ENDED", "AET", "PEN"):
+        return "FINISHED"
+    if status in ("IN_PLAY", "LIVE", "PAUSED", "1H", "2H", "HT"):
+        return "IN_PLAY"
+    return "SCHEDULED"
+
+def _jogos_mesmas_selecoes(jogo_a, jogo_b):
+    return set(_partes_jogo(jogo_a)) == set(_partes_jogo(jogo_b))
+
+def _calendario_para_jogo(nome_jogo):
+    for jogo in CALENDARIO_FIXO:
+        if _jogos_mesmas_selecoes(nome_jogo, jogo["jogo"]):
+            return jogo
+    return None
+
+def _aplicar_overrides_calendario(jogos_reais):
+    resultados_manuais = _resultados_manuais()
+    jogos = []
+    for jogo in jogos_reais:
+        item = dict(jogo)
+        calendario = _calendario_para_jogo(item["jogo"])
+        if calendario:
+            status_cal = _status_por_data_hora(calendario["data"], calendario["hora"])
+            if status_cal == "finalizado" and item.get("status") == "SCHEDULED":
+                item["status"] = "FINISHED"
+            elif status_cal == "aovivo" and item.get("status") == "SCHEDULED":
+                item["status"] = "IN_PLAY"
+
+        manual = resultados_manuais.get(item["jogo"])
+        origem_manual = item["jogo"]
+        if not manual and calendario:
+            origem_manual = calendario["jogo"]
+            manual = resultados_manuais.get(origem_manual)
+
+        if manual:
+            gc = manual.get("placar_c")
+            gf = manual.get("placar_f")
+            if origem_manual != item["jogo"]:
+                item_casa, item_fora = _partes_jogo(item["jogo"])
+                origem_casa, origem_fora = _partes_jogo(origem_manual)
+                if item_casa == origem_fora and item_fora == origem_casa:
+                    gc, gf = gf, gc
+            item["placar_c"] = gc
+            item["placar_f"] = gf
+            if gc is not None and gf is not None:
+                item["status"] = "FINISHED"
+        jogos.append(item)
+    return jogos
+
+def _jogos_do_calendario_fixo():
+    jogos = []
+    resultados_manuais = _resultados_manuais()
+    for jogo in CALENDARIO_FIXO:
+        status_cal = _status_por_data_hora(jogo["data"], jogo["hora"])
+        placar_manual = resultados_manuais.get(jogo["jogo"], {})
+        jogos.append({
+            "jogo": jogo["jogo"],
+            "placar_c": placar_manual.get("placar_c"),
+            "placar_f": placar_manual.get("placar_f"),
+            "status": "FINISHED" if status_cal == "finalizado" else ("IN_PLAY" if status_cal == "aovivo" else "SCHEDULED"),
+        })
+    return jogos
+
+def _grupo_do_jogo(nome_jogo):
+    t_c, t_f = _partes_jogo(nome_jogo)
+    for nome_grupo, times in GRUPOS_CONFIG.items():
+        times_norm = {_normalizar_time(t) for t in times}
+        if t_c in times_norm or t_f in times_norm:
+            return nome_grupo
+    return None
+
+def _classificacao_por_jogos(jogos_reais):
+    tabelas = {g: {time: {"pts": 0, "sg": 0, "gp": 0, "idx": i} for i, time in enumerate(times)}
+               for g, times in GRUPOS_CONFIG.items()}
+
+    for jogo in jogos_reais:
+        if jogo.get("status") != "FINISHED":
+            continue
+        gc = jogo.get("placar_c")
+        gf = jogo.get("placar_f")
+        if gc is None or gf is None:
+            continue
+        grupo = _grupo_do_jogo(jogo["jogo"])
+        if not grupo:
+            continue
+        casa, fora = _partes_jogo(jogo["jogo"])
+        casa_real = next((t for t in tabelas[grupo] if _normalizar_time(t) == casa), None)
+        fora_real = next((t for t in tabelas[grupo] if _normalizar_time(t) == fora), None)
+        if not casa_real or not fora_real:
+            continue
+
+        tabelas[grupo][casa_real]["gp"] += gc
+        tabelas[grupo][casa_real]["sg"] += gc - gf
+        tabelas[grupo][fora_real]["gp"] += gf
+        tabelas[grupo][fora_real]["sg"] += gf - gc
+        if gc > gf:
+            tabelas[grupo][casa_real]["pts"] += 3
+        elif gc < gf:
+            tabelas[grupo][fora_real]["pts"] += 3
+        else:
+            tabelas[grupo][casa_real]["pts"] += 1
+            tabelas[grupo][fora_real]["pts"] += 1
+
+    classificacao = {}
+    for grupo, times in tabelas.items():
+        classificacao[grupo] = sorted(
+            times,
+            key=lambda t: (-times[t]["pts"], -times[t]["sg"], -times[t]["gp"], times[t]["idx"])
+        )
+    return classificacao
+
+def _montar_resultado(jogos_reais, fonte, classificacao_real=None):
     """Constrói o dict de retorno padrão a partir de uma lista de jogos processados."""
+    jogos_reais = _aplicar_overrides_calendario(jogos_reais)
     gols_brasil = [None, None, None, None, None, None]
     idx_br = 0
     for j in jogos_reais:
         if j["status"] == "FINISHED" and idx_br < 3:
             nome = j["jogo"]
             gc, gf = j["placar_c"], j["placar_f"]
+            if gc is None or gf is None:
+                continue
             if nome.startswith("Brasil"):
                 gols_brasil[idx_br * 2]     = gc
                 gols_brasil[idx_br * 2 + 1] = gf
@@ -468,12 +647,54 @@ def _montar_resultado(jogos_reais, fonte):
                 gols_brasil[idx_br * 2]     = gf
                 gols_brasil[idx_br * 2 + 1] = gc
                 idx_br += 1
+    classificacao_calculada = _classificacao_por_jogos(jogos_reais)
+    classificacao_final = {g: list(t) for g, t in GRUPOS_CONFIG.items()}
+    for grupo in classificacao_final:
+        if classificacao_real and grupo in classificacao_real:
+            classificacao_final[grupo] = classificacao_real[grupo]
+        elif grupo in classificacao_calculada:
+            classificacao_final[grupo] = classificacao_calculada[grupo]
+
     return {
         "fonte":             fonte,
-        "classificacao_real": {g: list(t) for g, t in GRUPOS_CONFIG.items()},
+        "classificacao_real": classificacao_final,
         "jogos_reais":       jogos_reais,
         "gols_brasil":       gols_brasil,
     }
+
+def _classificacao_football_data(token):
+    try:
+        url = "https://api.football-data.org/v4/competitions/WC/standings?season=2026"
+        r = requests.get(url, headers={"X-Auth-Token": token}, timeout=6)
+        if r.status_code != 200:
+            return {}
+
+        retorno = {}
+        for standing in r.json().get("standings", []):
+            grupo_api = standing.get("group", "")
+            if not grupo_api:
+                continue
+            letra = grupo_api.split("_")[-1].upper()
+            nome_grupo = f"Grupo {letra}"
+            if nome_grupo not in GRUPOS_CONFIG:
+                continue
+
+            ordem = []
+            for linha in standing.get("table", []):
+                nome_time = linha.get("team", {}).get("name", "")
+                nome_norm = _normalizar_time(nome_time)
+                time_local = next(
+                    (t for t in GRUPOS_CONFIG[nome_grupo] if _normalizar_time(t) == nome_norm),
+                    nome_norm
+                )
+                ordem.append(time_local)
+
+            if ordem:
+                faltando = [t for t in GRUPOS_CONFIG[nome_grupo] if t not in ordem]
+                retorno[nome_grupo] = ordem + faltando
+        return retorno
+    except Exception:
+        return {}
 
 @st.cache_data(ttl=600)
 def obter_resultados():
@@ -498,17 +719,18 @@ def obter_resultados():
                 if matches:
                     jogos = []
                     for m in matches:
-                        t_c    = TRADUCAO.get(m["homeTeam"]["name"], m["homeTeam"]["name"])
-                        t_f    = TRADUCAO.get(m["awayTeam"]["name"], m["awayTeam"]["name"])
+                        t_c    = _normalizar_time(m["homeTeam"]["name"])
+                        t_f    = _normalizar_time(m["awayTeam"]["name"])
                         sc     = m.get("score", {}).get("fullTime", {})
                         status = m.get("status", "SCHEDULED")
                         jogos.append({
                             "jogo":     f"{t_c} x {t_f}",
                             "placar_c": sc.get("home"),
                             "placar_f": sc.get("away"),
-                            "status":   "FINISHED" if status == "FINISHED" else status,
+                            "status":   _status_api_para_padrao(status),
                         })
-                    return _montar_resultado(jogos, "football-data.org")
+                    classificacao_api = _classificacao_football_data(token)
+                    return _montar_resultado(jogos, "football-data.org", classificacao_api)
     except Exception:
         pass
 
@@ -522,8 +744,8 @@ def obter_resultados():
             if fixtures:
                 jogos = []
                 for m in fixtures:
-                    t_c = TRADUCAO.get(m.get("home_team", ""), m.get("home_team", ""))
-                    t_f = TRADUCAO.get(m.get("away_team", ""), m.get("away_team", ""))
+                    t_c = _normalizar_time(m.get("home_team", ""))
+                    t_f = _normalizar_time(m.get("away_team", ""))
                     gc  = m.get("home_score")
                     gf  = m.get("away_score")
                     st_ = m.get("status", "SCHEDULED")
@@ -531,7 +753,7 @@ def obter_resultados():
                         "jogo":     f"{t_c} x {t_f}",
                         "placar_c": gc,
                         "placar_f": gf,
-                        "status":   "FINISHED" if st_ == "FINISHED" else st_,
+                        "status":   _status_api_para_padrao(st_),
                     })
                 return _montar_resultado(jogos, "Zafronix Sports API")
     except Exception:
@@ -551,26 +773,26 @@ def obter_resultados():
                         participants = m.get("participants", [])
                         if len(participants) < 2:
                             continue
-                        t_c = TRADUCAO.get(participants[0].get("name", ""), participants[0].get("name", ""))
-                        t_f = TRADUCAO.get(participants[1].get("name", ""), participants[1].get("name", ""))
+                        t_c = _normalizar_time(participants[0].get("name", ""))
+                        t_f = _normalizar_time(participants[1].get("name", ""))
                         scores = m.get("scores", {})
                         gc  = scores.get("localteam_score")
                         gf  = scores.get("visitorteam_score")
                         st_ = m.get("state", {})
                         state_name = st_.get("name", "") if isinstance(st_, dict) else str(st_)
-                        ended = state_name in ("FT", "ENDED", "AET", "PEN")
                         jogos.append({
                             "jogo":     f"{t_c} x {t_f}",
                             "placar_c": gc,
                             "placar_f": gf,
-                            "status":   "FINISHED" if ended else "SCHEDULED",
+                            "status":   _status_api_para_padrao(state_name),
                         })
                     if jogos:
                         return _montar_resultado(jogos, "Sportmonks")
     except Exception:
         pass
 
-    return padrao
+    jogos_fallback = _jogos_do_calendario_fixo()
+    return _montar_resultado(jogos_fallback, "calendário fixo")
 
 api_data = obter_resultados()
 
@@ -579,25 +801,11 @@ api_data = obter_resultados()
 # ==============================================================================
 def _status_jogo(data_str: str, hora_str: str):
     """Retorna 'finalizado', 'aovivo' ou 'previsto' baseado na data/hora atual."""
-    try:
-        h_num = hora_str.replace("h", ":").rstrip(":")
-        if len(h_num) <= 5:
-            dt = datetime.strptime(f"2026/{data_str} {h_num}", "%Y/%d/%m %H:%M")
-        else:
-            return "previsto"
-        now   = datetime.now()
-        delta = (now - dt).total_seconds() / 60
-        if delta > 110:
-            return "finalizado"
-        if 0 <= delta <= 110:
-            return "aovivo"
-        return "previsto"
-    except Exception:
-        return "previsto"
+    return _status_por_data_hora(data_str, hora_str)
 
 def _countdown_brasil():
     """Retorna string do countdown para o próximo jogo do Brasil."""
-    agora = datetime.now(timezone.utc)
+    agora = _agora_brt()
     alvo  = PROXIMO_JOGO_BRASIL["data_hora"]
     delta = alvo - agora
     if delta.total_seconds() <= 0:
@@ -617,17 +825,14 @@ def _grupos_com_resultado():
     """
     finalizados = set()
     jogos_reais = api_data.get("jogos_reais", [])
-    if not jogos_reais:
-        return finalizados
 
     for nome_grupo, times in GRUPOS_CONFIG.items():
         for jogo in jogos_reais:
             if jogo.get("status") != "FINISHED":
                 continue
-            partes = jogo["jogo"].replace(" x ", "|").split("|")
-            t_c = partes[0].strip() if len(partes) > 0 else ""
-            t_f = partes[1].strip() if len(partes) > 1 else ""
-            if t_c in times or t_f in times:
+            t_c, t_f = _partes_jogo(jogo["jogo"])
+            times_norm = {_normalizar_time(t) for t in times}
+            if t_c in times_norm or t_f in times_norm:
                 finalizados.add(nome_grupo)
                 break
 
@@ -649,9 +854,9 @@ def _calcular_pontuacao(amigo):
     for g in GRUPOS_CONFIG:
         if g not in grupos_ativos:
             continue
-        if user["classificacao"][g][0] == real["classificacao_real"][g][0]:
+        if _normalizar_time(user["classificacao"][g][0]) == _normalizar_time(real["classificacao_real"][g][0]):
             pts_grupos += 2
-        if user["classificacao"][g][1] == real["classificacao_real"][g][1]:
+        if _normalizar_time(user["classificacao"][g][1]) == _normalizar_time(real["classificacao_real"][g][1]):
             pts_grupos += 2
     total += pts_grupos
     detalhes.append(("Fase de grupos", pts_grupos))
@@ -1061,7 +1266,7 @@ with aba_ranking:
         """, unsafe_allow_html=True)
 
     linhas = []
-    qualquer_jogo_realizado = any(g is not None for g in api_data["gols_brasil"])
+    qualquer_jogo_realizado = any(j.get("status") == "FINISHED" for j in api_data.get("jogos_reais", []))
 
     for amigo in AMIGOS:
         user   = st.session_state.banco[amigo]
