@@ -1491,10 +1491,3 @@ with aba_ranking:
         elif not linha["travado"]:
             with st.expander(f"{linha['amigo']} — palpite em aberto"):
                 st.caption("Ainda não travou os palpites.")
-
-
-                        unsafe_allow_html=True
-
-                    )                st.caption("Ainda não travou os palpites.")
-
-        elif not linha["travado"]:            with st.expander(f"{linha['amigo']} — palpite em aberto"):
