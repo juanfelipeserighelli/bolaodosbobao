@@ -758,7 +758,7 @@ def obter_resultados():
 
     # ── API 1: football-data.org ──────────────────────────────────────────────
     try:
-        token = st.secrets.get("FOOTBALL_DATA_TOKEN", "")
+        token = st.secrets.get("FOOTBALL_DATA_TOKEN", "52974ada524e459ea4cf52a9dcc19861")
         if token:
             url = "https://api.football-data.org/v4/competitions/WC/matches?season=2026"
             r = requests.get(url, headers={"X-Auth-Token": token}, timeout=6)
