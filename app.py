@@ -461,8 +461,9 @@ TRADUCAO = {
     "Cape Verde": "Cabo Verde", "Cape Verde Islands": "Cabo Verde", "Saudi Arabia": "Arábia Saudita", "Spain": "Espanha", "Uruguay": "Uruguai",
     "South Korea": "Coreia do Sul", "France": "França", "Iraq": "Iraque", "Norway": "Noruega", "Senegal": "Senegal",
     "Algeria": "Argélia", "Argentina": "Argentina", "Austria": "Áustria", "Jordan": "Jordânia",
-    "Colombia": "Colômbia", "DR Congo": "RD Congo", "Portugal": "Portugal", "Uzbekistan": "Uzbequistão",
+    "Colombia": "Colômbia", "DR Congo": "RD Congo", "Congo DR": "RD Congo", "Portugal": "Portugal", "Uzbekistan": "Uzbequistão",
     "Croatia": "Croácia", "England": "Inglaterra", "Ghana": "Gana", "Panama": "Panamá",
+    "Bosnia-Herzegovina": "Bósnia e Herzegovina", "Curaçao": "Curaçao", "Curaþao": "Curaçao",
 }
 
 ALIASES_TIMES = {
