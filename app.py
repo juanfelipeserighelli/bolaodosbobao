@@ -484,6 +484,7 @@ RESULTADOS_MANUAIS = {
     # Use quando alguma API demorar a publicar um resultado:
     "México x África do Sul": {"placar_c": 2, "placar_f": 0},
     "Tchéquia x Coreia do Sul": {"placar_c": 1, "placar_f": 2},
+    "Canadá x Bósnia": {"placar_c": 1, "placar_f": 1},
 }
 
 def _resultados_manuais():
@@ -759,7 +760,7 @@ def obter_resultados():
 
     # ── API 1: football-data.org ──────────────────────────────────────────────
     try:
-        token = st.secrets.get("FOOTBALL_DATA_TOKEN", "")
+        token = st.secrets.get("FOOTBALL_DATA_TOKEN", "52974ada524e459ea4cf52a9dcc19861")
         if token:
             url = "https://api.football-data.org/v4/competitions/WC/matches"
             r = requests.get(url, headers={"X-Auth-Token": token}, timeout=6)
@@ -853,6 +854,53 @@ def obter_resultados():
     return _montar_resultado(jogos_fallback, "calendário fixo")
 
 api_data = obter_resultados()
+
+# ==============================================================================
+# SINCRONIZAÇÃO AUTOMÁTICA — Atualiza placares do Brasil pela API
+# ==============================================================================
+def _sincronizar_placares_api():
+    """Atualiza automaticamente os placares do Brasil para todos os amigos baseado na API.
+    Respeita a ordem: API > Manual > Palpite anterior.
+    Só atualiza se o jogo está finalizado (status == FINISHED)."""
+    gols_api = api_data.get("gols_brasil", [None] * 6)
+    jogos_api = api_data.get("jogos_reais", [])
+    resultados_manuais = _resultados_manuais()
+    
+    mudancas_feitas = False
+    
+    for amigo in AMIGOS:
+        usuario = st.session_state.banco[amigo]
+        palpites_atuais = list(usuario["placar_brasil"])
+        
+        # Processa os 3 jogos do Brasil (índices 0-1, 2-3, 4-5)
+        for idx_jogo in range(3):
+            idx_placar = idx_jogo * 2
+            
+            # Verifica se existe resultado na API
+            if gols_api[idx_placar] is not None and gols_api[idx_placar + 1] is not None:
+                # Há resultado na API → atualiza com ela
+                palpites_atuais[idx_placar]     = gols_api[idx_placar]
+                palpites_atuais[idx_placar + 1] = gols_api[idx_placar + 1]
+                mudancas_feitas = True
+            else:
+                # API retornou None → tenta resultado manual como fallback
+                jogo_info = JOGOS_BRASIL[idx_jogo]
+                manual = resultados_manuais.get(jogo_info["jogo"], {})
+                if manual.get("placar_c") is not None and manual.get("placar_f") is not None:
+                    palpites_atuais[idx_placar]     = manual.get("placar_c")
+                    palpites_atuais[idx_placar + 1] = manual.get("placar_f")
+                    mudancas_feitas = True
+        
+        # Atualiza o banco se houve mudanças
+        if mudancas_feitas:
+            usuario["placar_brasil"] = palpites_atuais
+    
+    # Se teve mudanças, salva o banco
+    if mudancas_feitas:
+        salvar_banco(st.session_state.banco)
+
+# Executa sincronização automática ao carregar a página
+_sincronizar_placares_api()
 
 # ==============================================================================
 # HELPERS
@@ -1211,6 +1259,24 @@ with aba_grupos:
         st.caption(f"📍 {jogo_info['loc']}")
 
         b = idx * 2
+        
+        # Determina fonte do resultado (API vs Manual)
+        gols_api = api_data.get("gols_brasil", [None] * 6)
+        tem_resultado_api = gols_api[b] is not None and gols_api[b + 1] is not None
+        jogo_finalizado_api = False
+        for jogo in api_data.get("jogos_reais", []):
+            if jogo_info["jogo"] in jogo["jogo"] and jogo.get("status") == "FINISHED":
+                jogo_finalizado_api = True
+                break
+        
+        badge_fonte = ""
+        if tem_resultado_api and jogo_finalizado_api:
+            badge_fonte = '<span style="color:#15803d; font-size:11px; font-weight:600;">✅ Football-Data.org</span>'
+        else:
+            resultados_manuais = _resultados_manuais()
+            manual = resultados_manuais.get(jogo_info["jogo"], {})
+            if manual.get("placar_c") is not None:
+                badge_fonte = '<span style="color:#ca8a04; font-size:11px; font-weight:600;">✏️ Preenchimento manual</span>'
 
         if travado_ou_view:
             if dados_usuario["travado"]:
@@ -1223,6 +1289,8 @@ with aba_grupos:
                     f"🇧🇷 Brasil {g_br_salvo} × {g_adv_salvo} Adversário</div>",
                     unsafe_allow_html=True
                 )
+                if badge_fonte:
+                    st.markdown(f"<div style='text-align:center;'>{badge_fonte}</div>", unsafe_allow_html=True)
                 palpites_gols[b]     = g_br_salvo
                 palpites_gols[b + 1] = g_adv_salvo
             else:
