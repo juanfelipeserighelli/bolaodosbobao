@@ -482,8 +482,8 @@ ALIASES_TIMES = {
 
 RESULTADOS_MANUAIS = {
     # Use quando alguma API demorar a publicar um resultado:
-    "México x África do Sul": {"placar_c": 2, "placar_f": 0},
-    "Tchéquia x Coreia do Sul": {"placar_c": 1, "placar_f": 2},
+    #"México x África do Sul": {"placar_c": 2, "placar_f": 0},
+    #"Tchéquia x Coreia do Sul": {"placar_c": 1, "placar_f": 2},
 }
 
 def _resultados_manuais():
