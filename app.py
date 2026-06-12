@@ -458,8 +458,8 @@ TRADUCAO = {
     "Ivory Coast": "Costa do Marfim", "Cote d'Ivoire": "Costa do Marfim",
     "Japan": "Japão", "Netherlands": "Países Baixos", "Sweden": "Suécia", "Tunisia": "Tunísia",
     "Belgium": "Bélgica", "Egypt": "Egito", "Iran": "Irã", "New Zealand": "Nova Zelândia",
-    "Cape Verde": "Cabo Verde", "Saudi Arabia": "Arábia Saudita", "Spain": "Espanha", "Uruguay": "Uruguai",
-    "France": "França", "Iraq": "Iraque", "Norway": "Noruega", "Senegal": "Senegal",
+    "Cape Verde": "Cabo Verde", "Cape Verde Islands": "Cabo Verde", "Saudi Arabia": "Arábia Saudita", "Spain": "Espanha", "Uruguay": "Uruguai",
+    "South Korea": "Coreia do Sul", "France": "França", "Iraq": "Iraque", "Norway": "Noruega", "Senegal": "Senegal",
     "Algeria": "Argélia", "Argentina": "Argentina", "Austria": "Áustria", "Jordan": "Jordânia",
     "Colombia": "Colômbia", "DR Congo": "RD Congo", "Portugal": "Portugal", "Uzbekistan": "Uzbequistão",
     "Croatia": "Croácia", "England": "Inglaterra", "Ghana": "Gana", "Panama": "Panamá",
@@ -482,8 +482,8 @@ ALIASES_TIMES = {
 
 RESULTADOS_MANUAIS = {
     # Use quando alguma API demorar a publicar um resultado:
-    #"México x África do Sul": {"placar_c": 2, "placar_f": 0},
-    #"Tchéquia x Coreia do Sul": {"placar_c": 1, "placar_f": 2},
+    "México x África do Sul": {"placar_c": 2, "placar_f": 0},
+    "Tchéquia x Coreia do Sul": {"placar_c": 1, "placar_f": 2},
 }
 
 def _resultados_manuais():
@@ -741,7 +741,8 @@ def _classificacao_football_data(token):
                 faltando = [t for t in GRUPOS_CONFIG[nome_grupo] if t not in ordem]
                 retorno[nome_grupo] = ordem + faltando
         return retorno
-    except Exception:
+    except Exception as e:
+        st.error(f"Erro classificacao football-data: {e}")
         return {}
 
 @st.cache_data(ttl=600)
@@ -758,29 +759,38 @@ def obter_resultados():
 
     # ── API 1: football-data.org ──────────────────────────────────────────────
     try:
-        token = st.secrets.get("FOOTBALL_DATA_TOKEN", "52974ada524e459ea4cf52a9dcc19861")
+        token = st.secrets.get("FOOTBALL_DATA_TOKEN", "")
         if token:
-            url = "https://api.football-data.org/v4/competitions/WC/matches?season=2026"
+            url = "https://api.football-data.org/v4/competitions/WC/matches"
             r = requests.get(url, headers={"X-Auth-Token": token}, timeout=6)
             if r.status_code == 200:
                 matches = r.json().get("matches", [])
                 if matches:
                     jogos = []
                     for m in matches:
-                        t_c    = _normalizar_time(m["homeTeam"]["name"])
-                        t_f    = _normalizar_time(m["awayTeam"]["name"])
-                        sc     = m.get("score", {}).get("fullTime", {})
+                        t_c = _normalizar_time(m["homeTeam"]["name"])
+                        t_f = _normalizar_time(m["awayTeam"]["name"])
+                        score = m.get("score") or {}
+                        full_time = score.get("fullTime") or {}
+                        placar_c = full_time.get("home", full_time.get("homeTeam"))
+                        placar_f = full_time.get("away", full_time.get("awayTeam"))
                         status = m.get("status", "SCHEDULED")
                         jogos.append({
                             "jogo":     f"{t_c} x {t_f}",
-                            "placar_c": sc.get("home"),
-                            "placar_f": sc.get("away"),
+                            "placar_c": placar_c,
+                            "placar_f": placar_f,
                             "status":   _status_api_para_padrao(status),
                         })
+                    debug = str(st.secrets.get("DEBUG_FOOTBALL_DATA", "")).lower() in ("1", "true", "yes")
+                    if debug:
+                        st.write("Fonte:", "football-data.org")
+                        st.write("Jogos recebidos:", len(jogos))
+                        for j in jogos[:5]:
+                            st.write(j)
                     classificacao_api = _classificacao_football_data(token)
                     return _montar_resultado(jogos, "football-data.org", classificacao_api)
-    except Exception:
-        pass
+    except Exception as e:
+        st.error(f"Erro football-data: {e}")
 
     # ── API 2: Zafronix Sports API ────────────────────────────────────────────
     try:
@@ -1481,3 +1491,10 @@ with aba_ranking:
         elif not linha["travado"]:
             with st.expander(f"{linha['amigo']} — palpite em aberto"):
                 st.caption("Ainda não travou os palpites.")
+
+
+                        unsafe_allow_html=True
+
+                    )                st.caption("Ainda não travou os palpites.")
+
+        elif not linha["travado"]:            with st.expander(f"{linha['amigo']} — palpite em aberto"):
