@@ -1046,6 +1046,18 @@ if resultado_countdown:
     </div>
     """, unsafe_allow_html=True)
 
+# ── Status da sincronização automática ──────────────────────────────────────
+fonte_dados = api_data.get("fonte", "calendário fixo")
+gols_api = api_data.get("gols_brasil", [None] * 6)
+tem_resultado_api = any(g is not None for g in gols_api)
+
+if fonte_dados == "football-data.org" and tem_resultado_api:
+    st.info(f"✅ Resultados sincronizados automaticamente via **{fonte_dados}**. Os placares dos jogos do Brasil foram atualizados.")
+elif fonte_dados == "football-data.org":
+    st.info(f"🔄 Conectado a **{fonte_dados}**, mas nenhum jogo finalizado ainda.")
+else:
+    st.info(f"📅 Usando {fonte_dados} como fonte de dados.")
+
 # ==============================================================================
 # SELEÇÃO DE USUÁRIO + AUTENTICAÇÃO PIN
 # ==============================================================================
