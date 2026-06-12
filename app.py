@@ -176,6 +176,16 @@ h3 { font-size: 14px !important; font-weight: 600 !important; color: #334155 !im
     border-radius: 10px; padding: 12px 14px; margin-bottom: 14px;
 }
 .regra-item { font-size: 13px; color: #0c4a6e; padding: 3px 0; }
+.real-box {
+    background: #f8fafc; border: 1px solid #e2e8f0;
+    border-radius: 8px; padding: 8px 10px; margin-top: 8px;
+    font-size: 12px; color: #334155;
+}
+.real-title { font-weight: 800; color: #1e3a5f; margin-bottom: 3px; }
+.real-line { padding: 2px 0; }
+.detail-ok { color: #15803d; font-weight: 700; }
+.detail-err { color: #be123c; font-weight: 700; }
+.detail-wait { color: #64748b; font-weight: 700; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -456,6 +466,7 @@ TRADUCAO = {
 }
 
 ALIASES_TIMES = {
+    "Coreia": "República da Coreia",
     "Coreia do Sul": "República da Coreia",
     "República da Coreia": "República da Coreia",
     "Bósnia": "Bósnia e Herzegovina",
@@ -523,6 +534,15 @@ def _status_api_para_padrao(status):
         return "IN_PLAY"
     return "SCHEDULED"
 
+def _tem_placar(jogo):
+    return jogo.get("placar_c") is not None and jogo.get("placar_f") is not None
+
+def _formatar_placar(jogo):
+    casa, fora = _partes_jogo(jogo["jogo"])
+    if _tem_placar(jogo):
+        return f"{casa} {jogo['placar_c']} x {jogo['placar_f']} {fora}"
+    return f"{casa} x {fora}"
+
 def _jogos_mesmas_selecoes(jogo_a, jogo_b):
     return set(_partes_jogo(jogo_a)) == set(_partes_jogo(jogo_b))
 
@@ -537,13 +557,16 @@ def _aplicar_overrides_calendario(jogos_reais):
     jogos = []
     for jogo in jogos_reais:
         item = dict(jogo)
+        item.setdefault("fonte_resultado", item.get("fonte_resultado", "API"))
         calendario = _calendario_para_jogo(item["jogo"])
         if calendario:
             status_cal = _status_por_data_hora(calendario["data"], calendario["hora"])
             if status_cal == "finalizado" and item.get("status") == "SCHEDULED":
                 item["status"] = "FINISHED"
+                item["fonte_resultado"] = "calendário"
             elif status_cal == "aovivo" and item.get("status") == "SCHEDULED":
                 item["status"] = "IN_PLAY"
+                item["fonte_resultado"] = "calendário"
 
         manual = resultados_manuais.get(item["jogo"])
         origem_manual = item["jogo"]
@@ -561,6 +584,7 @@ def _aplicar_overrides_calendario(jogos_reais):
                     gc, gf = gf, gc
             item["placar_c"] = gc
             item["placar_f"] = gf
+            item["fonte_resultado"] = "manual"
             if gc is not None and gf is not None:
                 item["status"] = "FINISHED"
         jogos.append(item)
@@ -577,8 +601,29 @@ def _jogos_do_calendario_fixo():
             "placar_c": placar_manual.get("placar_c"),
             "placar_f": placar_manual.get("placar_f"),
             "status": "FINISHED" if status_cal == "finalizado" else ("IN_PLAY" if status_cal == "aovivo" else "SCHEDULED"),
+            "fonte_resultado": "manual" if placar_manual else "calendário",
         })
     return jogos
+
+def _buscar_jogo_real(nome_jogo):
+    for jogo in api_data.get("jogos_reais", []):
+        if _jogos_mesmas_selecoes(jogo["jogo"], nome_jogo):
+            return jogo
+    return None
+
+def _jogos_do_grupo(nome_grupo, apenas_com_placar=False):
+    jogos = []
+    times_norm = {_normalizar_time(t) for t in GRUPOS_CONFIG[nome_grupo]}
+    for jogo in api_data.get("jogos_reais", []):
+        t_c, t_f = _partes_jogo(jogo["jogo"])
+        if t_c in times_norm and t_f in times_norm:
+            if apenas_com_placar and not (jogo.get("status") == "FINISHED" and _tem_placar(jogo)):
+                continue
+            jogos.append(jogo)
+    return jogos
+
+def _grupo_tem_placar_real(nome_grupo):
+    return bool(_jogos_do_grupo(nome_grupo, apenas_com_placar=True))
 
 def _grupo_do_jogo(nome_jogo):
     t_c, t_f = _partes_jogo(nome_jogo)
@@ -630,6 +675,8 @@ def _classificacao_por_jogos(jogos_reais):
 
 def _montar_resultado(jogos_reais, fonte, classificacao_real=None):
     """Constrói o dict de retorno padrão a partir de uma lista de jogos processados."""
+    for jogo in jogos_reais:
+        jogo.setdefault("fonte_resultado", fonte)
     jogos_reais = _aplicar_overrides_calendario(jogos_reais)
     gols_brasil = [None, None, None, None, None, None]
     idx_br = 0
@@ -830,6 +877,8 @@ def _grupos_com_resultado():
         for jogo in jogos_reais:
             if jogo.get("status") != "FINISHED":
                 continue
+            if not _tem_placar(jogo):
+                continue
             t_c, t_f = _partes_jogo(jogo["jogo"])
             times_norm = {_normalizar_time(t) for t in times}
             if t_c in times_norm or t_f in times_norm:
@@ -854,12 +903,31 @@ def _calcular_pontuacao(amigo):
     for g in GRUPOS_CONFIG:
         if g not in grupos_ativos:
             continue
-        if _normalizar_time(user["classificacao"][g][0]) == _normalizar_time(real["classificacao_real"][g][0]):
-            pts_grupos += 2
-        if _normalizar_time(user["classificacao"][g][1]) == _normalizar_time(real["classificacao_real"][g][1]):
-            pts_grupos += 2
+        palpite_1 = user["classificacao"][g][0]
+        palpite_2 = user["classificacao"][g][1]
+        real_1 = real["classificacao_real"][g][0]
+        real_2 = real["classificacao_real"][g][1]
+
+        acertou_1 = _normalizar_time(palpite_1) == _normalizar_time(real_1)
+        pts_1 = 2 if acertou_1 else 0
+        pts_grupos += pts_1
+        detalhes.append({
+            "cat": g,
+            "texto": f"1º colocado: palpite {palpite_1}; atual {real_1}",
+            "pts": pts_1,
+            "status": "ok" if acertou_1 else "err",
+        })
+
+        acertou_2 = _normalizar_time(palpite_2) == _normalizar_time(real_2)
+        pts_2 = 2 if acertou_2 else 0
+        pts_grupos += pts_2
+        detalhes.append({
+            "cat": g,
+            "texto": f"2º colocado: palpite {palpite_2}; atual {real_2}",
+            "pts": pts_2,
+            "status": "ok" if acertou_2 else "err",
+        })
     total += pts_grupos
-    detalhes.append(("Fase de grupos", pts_grupos))
 
     pts_brasil = 0
     for i in range(3):
@@ -868,18 +936,39 @@ def _calcular_pontuacao(amigo):
         p_adv = user["placar_brasil"][b + 1]
         r_br  = real["gols_brasil"][b]
         r_adv = real["gols_brasil"][b + 1]
+        nome_jogo = JOGOS_BRASIL[i]["jogo"]
         if r_br is None or r_adv is None:
+            detalhes.append({
+                "cat": "Jogos do Brasil",
+                "texto": f"{nome_jogo}: palpite {p_br}x{p_adv}; aguardando resultado",
+                "pts": 0,
+                "status": "wait",
+            })
             continue
         if p_br == r_br and p_adv == r_adv:
-            pts_brasil += 5
+            pts_jogo = 5
+            status = "ok"
+            texto = f"{nome_jogo}: placar exato, palpite {p_br}x{p_adv}; real {r_br}x{r_adv}"
         elif (
             (p_br > p_adv and r_br > r_adv) or
             (p_br < p_adv and r_br < r_adv) or
             (p_br == p_adv and r_br == r_adv)
         ):
-            pts_brasil += 3
+            pts_jogo = 3
+            status = "ok"
+            texto = f"{nome_jogo}: vencedor/empate correto, palpite {p_br}x{p_adv}; real {r_br}x{r_adv}"
+        else:
+            pts_jogo = 0
+            status = "err"
+            texto = f"{nome_jogo}: palpite {p_br}x{p_adv}; real {r_br}x{r_adv}"
+        pts_brasil += pts_jogo
+        detalhes.append({
+            "cat": "Jogos do Brasil",
+            "texto": texto,
+            "pts": pts_jogo,
+            "status": status,
+        })
     total += pts_brasil
-    detalhes.append(("Jogos do Brasil", pts_brasil))
     return total, detalhes
 
 # ==============================================================================
@@ -1071,6 +1160,32 @@ with aba_grupos:
             dados_usuario["classificacao"][nome_grupo] = [t1, t2, t3, t4]
             palpites_grupos[nome_grupo] = [t1, t2, t3, t4]
 
+        jogos_com_placar = _jogos_do_grupo(nome_grupo, apenas_com_placar=True)
+        if jogos_com_placar:
+            atual = api_data["classificacao_real"].get(nome_grupo, lista_times)
+            ordem_atual = " &nbsp;|&nbsp; ".join(
+                f"{pos + 1}º {time}" for pos, time in enumerate(atual)
+            )
+            linhas_resultados = "".join(
+                f'<div class="real-line">⚽ {_formatar_placar(jogo)} '
+                f'<span style="color:#94a3b8;">({jogo.get("fonte_resultado", api_data["fonte"])})</span></div>'
+                for jogo in jogos_com_placar
+            )
+            st.markdown(f"""
+            <div class="real-box">
+                <div class="real-title">Classificação atual</div>
+                <div class="real-line">{ordem_atual}</div>
+                {linhas_resultados}
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown("""
+            <div class="real-box">
+                <div class="real-title">Classificação atual</div>
+                <div class="real-line">Aguardando resultados com placar.</div>
+            </div>
+            """, unsafe_allow_html=True)
+
         st.markdown("</div>", unsafe_allow_html=True)
 
     # ── Jogos do Brasil ──────────────────────────────────────────────────────
@@ -1227,7 +1342,17 @@ with aba_calendario:
         st.markdown(f'<div class="data-header">📆 {data}</div>', unsafe_allow_html=True)
         jogos_data = [j for j in jogos_exibir if j["data"] == data]
         for j in jogos_data:
+            jogo_real = _buscar_jogo_real(j["jogo"])
             status = _status_jogo(j["data"], j["hora"])
+            if jogo_real:
+                if jogo_real.get("status") == "FINISHED":
+                    status = "finalizado"
+                elif jogo_real.get("status") == "IN_PLAY":
+                    status = "aovivo"
+            nome_jogo = _formatar_placar(jogo_real) if jogo_real and _tem_placar(jogo_real) else j["jogo"]
+            fonte_resultado = ""
+            if jogo_real and _tem_placar(jogo_real):
+                fonte_resultado = f' · Resultado: {jogo_real.get("fonte_resultado", api_data["fonte"])}'
             brasil_class = "jogo-brasil" if j["brasil"] else ""
             if status == "finalizado":
                 badge = '<span class="badge-finalizado">✓ Finalizado</span>'
@@ -1241,8 +1366,8 @@ with aba_calendario:
                 <div class="jogo-data">{j["data"]}</div>
                 <div class="jogo-hora">{j["hora"]}</div>
                 <div>
-                    <div class="jogo-nome">{j["jogo"]}</div>
-                    <div class="jogo-local">📍 {j["local"]}</div>
+                    <div class="jogo-nome">{nome_jogo}</div>
+                    <div class="jogo-local">📍 {j["local"]}{fonte_resultado}</div>
                 </div>
                 {badge}
             </div>
@@ -1339,8 +1464,19 @@ with aba_ranking:
     for linha in linhas:
         if linha["travado"] and linha["detalhes"]:
             with st.expander(f"{linha['amigo']} — {linha['total']} pts"):
-                for cat, pts in linha["detalhes"]:
-                    st.markdown(f"- **{cat}**: {pts} pts")
+                for detalhe in linha["detalhes"]:
+                    status = detalhe.get("status", "wait")
+                    if status == "ok":
+                        icon, cls = "✅", "detail-ok"
+                    elif status == "err":
+                        icon, cls = "❌", "detail-err"
+                    else:
+                        icon, cls = "⏳", "detail-wait"
+                    st.markdown(
+                        f'{icon} <strong>{detalhe["cat"]}</strong> — {detalhe["texto"]} '
+                        f'<span class="{cls}">+{detalhe["pts"]} pts</span>',
+                        unsafe_allow_html=True
+                    )
         elif not linha["travado"]:
             with st.expander(f"{linha['amigo']} — palpite em aberto"):
                 st.caption("Ainda não travou os palpites.")
