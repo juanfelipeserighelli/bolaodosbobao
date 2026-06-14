@@ -394,7 +394,8 @@ def carregar_banco():
 def salvar_banco(banco_completo):
     """
     Grava o banco completo no JSONBin via PUT.
-    Retorna True se bem-sucedido, False caso contrário.
+    PROTEÇÃO: antes de salvar, compara com o banco remoto e nunca
+    sobrescreve palpites de usuários travados com dados da API.
     """
     try:
         bin_id  = st.secrets.get("JSONBIN_ID", "")
@@ -402,6 +403,17 @@ def salvar_banco(banco_completo):
         if not bin_id or not api_key:
             st.session_state.banco = banco_completo
             return True
+
+        # ── Busca o banco remoto atual para proteção ──────────────────────
+        resp_atual = requests.get(_jsonbin_url(), headers=_jsonbin_headers(), timeout=6)
+        if resp_atual.status_code == 200:
+            banco_remoto = resp_atual.json().get("record", {})
+            for amigo in AMIGOS:
+                if banco_remoto.get(amigo, {}).get("travado"):
+                    # Usuário travado: preserva classificacao e placar_brasil remotos
+                    banco_completo[amigo]["classificacao"]  = banco_remoto[amigo]["classificacao"]
+                    banco_completo[amigo]["placar_brasil"]  = banco_remoto[amigo]["placar_brasil"]
+                    banco_completo[amigo]["travado"]        = True
 
         resp = requests.put(_jsonbin_url(), json=banco_completo, headers=_jsonbin_headers(), timeout=8)
         if resp.status_code == 200:
@@ -861,49 +873,6 @@ api_data = obter_resultados()
 # ==============================================================================
 # SINCRONIZAÇÃO AUTOMÁTICA — Atualiza placares do Brasil pela API
 # ==============================================================================
-def _sincronizar_placares_api():
-    """Atualiza automaticamente os placares do Brasil para todos os amigos baseado na API.
-    Respeita a ordem: API > Manual > Palpite anterior.
-    Só atualiza se o jogo está finalizado (status == FINISHED)."""
-    gols_api = api_data.get("gols_brasil", [None] * 6)
-    jogos_api = api_data.get("jogos_reais", [])
-    resultados_manuais = _resultados_manuais()
-    
-    mudancas_feitas = False
-    
-    for amigo in AMIGOS:
-        usuario = st.session_state.banco[amigo]
-        palpites_atuais = list(usuario["placar_brasil"])
-        
-        # Processa os 3 jogos do Brasil (índices 0-1, 2-3, 4-5)
-        for idx_jogo in range(3):
-            idx_placar = idx_jogo * 2
-            
-            # Verifica se existe resultado na API
-            if gols_api[idx_placar] is not None and gols_api[idx_placar + 1] is not None:
-                # Há resultado na API → atualiza com ela
-                palpites_atuais[idx_placar]     = gols_api[idx_placar]
-                palpites_atuais[idx_placar + 1] = gols_api[idx_placar + 1]
-                mudancas_feitas = True
-            else:
-                # API retornou None → tenta resultado manual como fallback
-                jogo_info = JOGOS_BRASIL[idx_jogo]
-                manual = resultados_manuais.get(jogo_info["jogo"], {})
-                if manual.get("placar_c") is not None and manual.get("placar_f") is not None:
-                    palpites_atuais[idx_placar]     = manual.get("placar_c")
-                    palpites_atuais[idx_placar + 1] = manual.get("placar_f")
-                    mudancas_feitas = True
-        
-        # Atualiza o banco se houve mudanças
-        if mudancas_feitas:
-            usuario["placar_brasil"] = palpites_atuais
-    
-    # Se teve mudanças, salva o banco
-    if mudancas_feitas:
-        salvar_banco(st.session_state.banco)
-
-# Executa sincronização automática ao carregar a página
-_sincronizar_placares_api()
 
 # ==============================================================================
 # HELPERS
