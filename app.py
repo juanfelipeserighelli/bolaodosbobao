@@ -1309,7 +1309,6 @@ with aba_grupos:
 
         if travado_ou_view:
             if dados_usuario["travado"]:
-                # Mostra os placares salvos de forma clara
                 g_br_salvo  = int(dados_usuario["placar_brasil"][b])
                 g_adv_salvo = int(dados_usuario["placar_brasil"][b + 1])
                 st.markdown(
@@ -1318,19 +1317,15 @@ with aba_grupos:
                     f"🇧🇷 Brasil {g_br_salvo} × {g_adv_salvo} Adversário</div>",
                     unsafe_allow_html=True
                 )
-                if badge_fonte:
-                    st.markdown(f"<div style='text-align:center;'>{badge_fonte}</div>", unsafe_allow_html=True)
                 palpites_gols[b]     = g_br_salvo
                 palpites_gols[b + 1] = g_adv_salvo
             else:
-                # Não autenticado e não travado
                 st.markdown(
                     "<span style='color:#94a3b8;font-size:13px;'>"
                     "🔒 Faça login para ver e editar seus palpites de placar</span>",
                     unsafe_allow_html=True
                 )
         else:
-            # Modo edição normal
             c1, c2 = st.columns(2)
             g_br  = c1.number_input("Gols Brasil", min_value=0, max_value=20,
                                     value=int(dados_usuario["placar_brasil"][b]),
@@ -1340,6 +1335,40 @@ with aba_grupos:
                                     step=1, key=f"gadv_{idx}")
             palpites_gols[b]     = g_br
             palpites_gols[b + 1] = g_adv
+
+        # ── Resultado real via API (igual ao "real-box" dos grupos) ──────────
+        r_br  = api_data.get("gols_brasil", [None]*6)[b]
+        r_adv = api_data.get("gols_brasil", [None]*6)[b + 1]
+
+        # Descobre o nome do adversário a partir do jogo
+        t_c, t_f = _partes_jogo(jogo_info["jogo"])
+        adversario = t_f if t_c == "Brasil" else t_c
+
+        if r_br is not None and r_adv is not None:
+            if t_c == "Brasil":
+                placar_str = f"Brasil {r_br} × {r_adv} {adversario}"
+            else:
+                placar_str = f"{adversario} {r_adv} × {r_br} Brasil"
+
+            fonte_str = ""
+            if badge_fonte:
+                fonte_str = badge_fonte
+            else:
+                fonte_str = f'<span style="color:#94a3b8;font-size:11px;">{api_data["fonte"]}</span>'
+
+            st.markdown(f"""
+            <div class="real-box">
+                <div class="real-title">Resultado real</div>
+                <div class="real-line">⚽ {placar_str} {fonte_str}</div>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown("""
+            <div class="real-box">
+                <div class="real-title">Resultado real</div>
+                <div class="real-line">Aguardando resultado.</div>
+            </div>
+            """, unsafe_allow_html=True)
 
         st.markdown("</div>", unsafe_allow_html=True)
 
