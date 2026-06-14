@@ -487,7 +487,7 @@ RESULTADOS_MANUAIS = {
     "Tchéquia x Coreia do Sul": {"placar_c": 1, "placar_f": 2},
     "Canadá x Bósnia": {"placar_c": 1, "placar_f": 1},
     "Estados Unidos x Paraguai": {"placar_c": 4, "placar_f": 1},
-    "Catar x Suiça": {"placar_c": 1, "placar_f": 1},
+    "Catar x Suíça": {"placar_c": 1, "placar_f": 1},
     "Brasil x Marrocos": {"placar_c": 1, "placar_f": 1}
 }
 
