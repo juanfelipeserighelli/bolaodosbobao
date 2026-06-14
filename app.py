@@ -488,7 +488,7 @@ RESULTADOS_MANUAIS = {
     "Canadá x Bósnia": {"placar_c": 1, "placar_f": 1},
     "Estados Unidos x Paraguai": {"placar_c": 4, "placar_f": 1},
     "Catar x Suiça": {"placar_c": 1, "placar_f": 1},
-    "Brasil x Marroco": {"placar_c": 1, "placar_f": 1}
+    "Brasil x Marrocos": {"placar_c": 1, "placar_f": 1}
 }
 
 def _resultados_manuais():
