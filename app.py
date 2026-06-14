@@ -692,18 +692,19 @@ def _classificacao_por_jogos(jogos_reais):
     return classificacao
 
 def _montar_resultado(jogos_reais, fonte, classificacao_real=None):
-    """Constrói o dict de retorno padrão a partir de uma lista de jogos processados."""
     for jogo in jogos_reais:
         jogo.setdefault("fonte_resultado", fonte)
     jogos_reais = _aplicar_overrides_calendario(jogos_reais)
-    gols_brasil = [None, None, None, None, None, None]
+
+    # Gols do Brasil
+    gols_brasil = [None] * 6
     idx_br = 0
     for j in jogos_reais:
         if j["status"] == "FINISHED" and idx_br < 3:
-            nome = j["jogo"]
             gc, gf = j["placar_c"], j["placar_f"]
             if gc is None or gf is None:
                 continue
+            nome = j["jogo"]
             if nome.startswith("Brasil"):
                 gols_brasil[idx_br * 2]     = gc
                 gols_brasil[idx_br * 2 + 1] = gf
@@ -712,19 +713,29 @@ def _montar_resultado(jogos_reais, fonte, classificacao_real=None):
                 gols_brasil[idx_br * 2]     = gf
                 gols_brasil[idx_br * 2 + 1] = gc
                 idx_br += 1
+
+    # Classificação final:
+    # Prioridade 1 → classificacao_real da API (ordem oficial FIFA)
+    # Prioridade 2 → recalculada localmente pelos gols (fallback)
+    # Prioridade 3 → ordem padrão (nenhum jogo ainda)
     classificacao_calculada = _classificacao_por_jogos(jogos_reais)
-    classificacao_final = {g: list(t) for g, t in GRUPOS_CONFIG.items()}
-    for grupo in classificacao_final:
-        if classificacao_real and grupo in classificacao_real:
+    classificacao_final = {}
+
+    for grupo in GRUPOS_CONFIG:
+        if classificacao_real and grupo in classificacao_real and len(classificacao_real[grupo]) == 4:
+            # API retornou ordem oficial — usa direto, sem recalcular
             classificacao_final[grupo] = classificacao_real[grupo]
         elif grupo in classificacao_calculada:
+            # Fallback: recalcula pelos gols (sem desempate avançado)
             classificacao_final[grupo] = classificacao_calculada[grupo]
+        else:
+            classificacao_final[grupo] = list(GRUPOS_CONFIG[grupo])
 
     return {
-        "fonte":             fonte,
+        "fonte":              fonte,
         "classificacao_real": classificacao_final,
-        "jogos_reais":       jogos_reais,
-        "gols_brasil":       gols_brasil,
+        "jogos_reais":        jogos_reais,
+        "gols_brasil":        gols_brasil,
     }
 
 def _classificacao_football_data(token):
@@ -748,18 +759,22 @@ def _classificacao_football_data(token):
             for linha in standing.get("table", []):
                 nome_time = linha.get("team", {}).get("name", "")
                 nome_norm = _normalizar_time(nome_time)
+                # Tenta encontrar o time local pelo nome normalizado
                 time_local = next(
                     (t for t in GRUPOS_CONFIG[nome_grupo] if _normalizar_time(t) == nome_norm),
-                    nome_norm
+                    None
                 )
-                ordem.append(time_local)
+                if time_local:
+                    ordem.append(time_local)
 
             if ordem:
+                # Adiciona times que a API não retornou (ainda sem jogos) no final
                 faltando = [t for t in GRUPOS_CONFIG[nome_grupo] if t not in ordem]
                 retorno[nome_grupo] = ordem + faltando
+
         return retorno
     except Exception as e:
-        st.error(f"Erro classificacao football-data: {e}")
+        st.warning(f"⚠️ Erro ao buscar classificação da API: {e}")
         return {}
 
 @st.cache_data(ttl=600)
