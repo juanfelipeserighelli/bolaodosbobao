@@ -777,7 +777,7 @@ def _classificacao_football_data(token):
         st.warning(f"⚠️ Erro ao buscar classificação da API: {e}")
         return {}
 
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=120)
 def obter_resultados():
     """
     Tenta as 3 APIs em sequência. Se todas falharem, usa calendário fixo.
