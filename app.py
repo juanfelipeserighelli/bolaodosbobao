@@ -165,11 +165,6 @@ h3 { font-size: 14px !important; font-weight: 600 !important; color: #334155 !im
     border-radius: 12px; padding: 12px 14px; margin-bottom: 10px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
-.mm-card-locked {
-    background: #f8fafc; border: 1px dashed #e2e8f0;
-    border-radius: 12px; padding: 10px 14px; margin-bottom: 8px;
-    opacity: 0.6;
-}
 .mm-id { font-size: 10px; color: #94a3b8; font-weight: 700;
     text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.05em; }
 .mm-times { font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px; }
@@ -178,37 +173,6 @@ h3 { font-size: 14px !important; font-weight: 600 !important; color: #334155 !im
     border-radius: 6px; padding: 5px 10px; margin-top: 6px;
     font-size: 12px; color: #0c4a6e; font-weight: 600;
 }
-.mm-vencedor-badge {
-    display: inline-block; background: #dcfce7; color: #15803d;
-    font-size: 11px; font-weight: 700; padding: 2px 8px;
-    border-radius: 20px; margin-left: 6px;
-}
-
-/* ── Árvore visual ── */
-.arvore-container {
-    overflow-x: auto; padding: 10px 0; margin-bottom: 16px;
-}
-.arvore-jogo {
-    background: #fff; border: 1.5px solid #e2e8f0;
-    border-radius: 8px; padding: 6px 10px; margin: 3px 0;
-    font-size: 11px; min-width: 130px; text-align: center;
-}
-.arvore-jogo-brasil {
-    border-color: #15803d; background: #f0fdf4;
-}
-.arvore-time { font-weight: 700; color: #1e293b; }
-.arvore-placar { color: #1d4ed8; font-weight: 800; font-size: 13px; }
-
-/* ── Calendário ── */
-.jogo-card {
-    background: #ffffff; border: 1px solid #e2e8f0;
-    border-radius: 10px; padding: 10px 13px; margin-bottom: 8px;
-    display: flex; align-items: center; gap: 10px;
-}
-.jogo-data { font-size: 11px; color: #64748b; min-width: 36px; text-align: center; }
-.jogo-hora { font-size: 11px; font-weight: 700; color: #334155; min-width: 34px; }
-.jogo-nome { font-size: 13px; font-weight: 600; color: #1e293b; flex: 1; }
-.jogo-local { font-size: 11px; color: #94a3b8; }
 
 /* ── Fonte de dados ── */
 .fonte-dados {
@@ -268,29 +232,51 @@ JOGOS_BRASIL = [
 ]
 
 # ==============================================================================
-# MATA-MATA — ESTRUTURA POR FASE
+# MATA-MATA — estrutura por fase com placeholders que viram nomes reais
 # ==============================================================================
-# Fase 1: Oitavas de Final (M1-M16)
-MATA_MATA_OITAVAS = [
-    {"id": "M1",  "t1": "1º E", "t2": "3º colocado"},
-    {"id": "M2",  "t1": "1º I", "t2": "3º colocado"},
-    {"id": "M3",  "t1": "2º A", "t2": "2º B"},
-    {"id": "M4",  "t1": "1º F", "t2": "2º C"},
-    {"id": "M5",  "t1": "2º K", "t2": "2º L"},
-    {"id": "M6",  "t1": "1º H", "t2": "2º J"},
-    {"id": "M7",  "t1": "1º D", "t2": "3º colocado"},
-    {"id": "M8",  "t1": "1º G", "t2": "3º colocado"},
-    {"id": "M9",  "t1": "1º C", "t2": "2º F"},
-    {"id": "M10", "t1": "2º E", "t2": "2º I"},
-    {"id": "M11", "t1": "1º A", "t2": "3º colocado"},
-    {"id": "M12", "t1": "1º L", "t2": "3º colocado"},
-    {"id": "M13", "t1": "1º J", "t2": "2º H"},
-    {"id": "M14", "t1": "2º D", "t2": "2º G"},
-    {"id": "M15", "t1": "1º B", "t2": "3º colocado"},
-    {"id": "M16", "t1": "1º K", "t2": "3º colocado"},
+
+# Chaveamento fixo das oitavas (posições dos grupos)
+# Quando a classificação final de grupos estiver disponível, os nomes reais
+# serão resolvidos automaticamente via _resolver_nome_mm()
+MATA_MATA_OITAVAS_DEF = [
+    {"id": "M1",  "pos1": ("E", 1), "pos2": ("?", 0)},   # 1ºE vs 3º colocado
+    {"id": "M2",  "pos1": ("I", 1), "pos2": ("?", 0)},   # 1ºI vs 3º colocado
+    {"id": "M3",  "pos1": ("A", 2), "pos2": ("B", 2)},   # 2ºA vs 2ºB
+    {"id": "M4",  "pos1": ("F", 1), "pos2": ("C", 2)},   # 1ºF vs 2ºC
+    {"id": "M5",  "pos1": ("K", 2), "pos2": ("L", 2)},   # 2ºK vs 2ºL
+    {"id": "M6",  "pos1": ("H", 1), "pos2": ("J", 2)},   # 1ºH vs 2ºJ
+    {"id": "M7",  "pos1": ("D", 1), "pos2": ("?", 0)},   # 1ºD vs 3º colocado
+    {"id": "M8",  "pos1": ("G", 1), "pos2": ("?", 0)},   # 1ºG vs 3º colocado
+    {"id": "M9",  "pos1": ("C", 1), "pos2": ("F", 2)},   # 1ºC vs 2ºF
+    {"id": "M10", "pos1": ("E", 2), "pos2": ("I", 2)},   # 2ºE vs 2ºI
+    {"id": "M11", "pos1": ("A", 1), "pos2": ("?", 0)},   # 1ºA vs 3º colocado
+    {"id": "M12", "pos1": ("L", 1), "pos2": ("?", 0)},   # 1ºL vs 3º colocado
+    {"id": "M13", "pos1": ("J", 1), "pos2": ("H", 2)},   # 1ºJ vs 2ºH
+    {"id": "M14", "pos1": ("D", 2), "pos2": ("G", 2)},   # 2ºD vs 2ºG
+    {"id": "M15", "pos1": ("B", 1), "pos2": ("?", 0)},   # 1ºB vs 3º colocado
+    {"id": "M16", "pos1": ("K", 1), "pos2": ("?", 0)},   # 1ºK vs 3º colocado
 ]
 
-# Fase 2: Quartas de Final (Q1-Q8)
+# Rótulos legíveis das posições (para quando não há nome real)
+MATA_MATA_OITAVAS_LABELS = [
+    {"id": "M1",  "t1": "1º Grupo E",  "t2": "3º colocado"},
+    {"id": "M2",  "t1": "1º Grupo I",  "t2": "3º colocado"},
+    {"id": "M3",  "t1": "2º Grupo A",  "t2": "2º Grupo B"},
+    {"id": "M4",  "t1": "1º Grupo F",  "t2": "2º Grupo C"},
+    {"id": "M5",  "t1": "2º Grupo K",  "t2": "2º Grupo L"},
+    {"id": "M6",  "t1": "1º Grupo H",  "t2": "2º Grupo J"},
+    {"id": "M7",  "t1": "1º Grupo D",  "t2": "3º colocado"},
+    {"id": "M8",  "t1": "1º Grupo G",  "t2": "3º colocado"},
+    {"id": "M9",  "t1": "1º Grupo C",  "t2": "2º Grupo F"},
+    {"id": "M10", "t1": "2º Grupo E",  "t2": "2º Grupo I"},
+    {"id": "M11", "t1": "1º Grupo A",  "t2": "3º colocado"},
+    {"id": "M12", "t1": "1º Grupo L",  "t2": "3º colocado"},
+    {"id": "M13", "t1": "1º Grupo J",  "t2": "2º Grupo H"},
+    {"id": "M14", "t1": "2º Grupo D",  "t2": "2º Grupo G"},
+    {"id": "M15", "t1": "1º Grupo B",  "t2": "3º colocado"},
+    {"id": "M16", "t1": "1º Grupo K",  "t2": "3º colocado"},
+]
+
 MATA_MATA_QUARTAS = [
     {"id": "Q1", "t1": "Venc. M1",  "t2": "Venc. M2"},
     {"id": "Q2", "t1": "Venc. M3",  "t2": "Venc. M4"},
@@ -302,7 +288,6 @@ MATA_MATA_QUARTAS = [
     {"id": "Q8", "t1": "Venc. M15", "t2": "Venc. M16"},
 ]
 
-# Fase 3: Semifinais (S1-S4)
 MATA_MATA_SEMIS = [
     {"id": "S1", "t1": "Venc. Q1", "t2": "Venc. Q2"},
     {"id": "S2", "t1": "Venc. Q3", "t2": "Venc. Q4"},
@@ -310,29 +295,28 @@ MATA_MATA_SEMIS = [
     {"id": "S4", "t1": "Venc. Q7", "t2": "Venc. Q8"},
 ]
 
-# Fase 4: Final e Terceiro Lugar
 MATA_MATA_FINAL = [
-    {"id": "T1", "t1": "Venc. S1", "t2": "Venc. S2", "label": "3º Lugar (Chave 1)"},
-    {"id": "T2", "t1": "Venc. S3", "t2": "Venc. S4", "label": "3º Lugar (Chave 2)"},
-    {"id": "F1", "t1": "Venc. S1 ou S2", "t2": "Venc. S3 ou S4", "label": "🏆 FINAL"},
+    {"id": "T1", "t1": "Perd. S1", "t2": "Perd. S2", "label": "3º Lugar (Chave 1)"},
+    {"id": "T2", "t1": "Perd. S3", "t2": "Perd. S4", "label": "3º Lugar (Chave 2)"},
+    {"id": "F1", "t1": "Venc. S1/S2", "t2": "Venc. S3/S4", "label": "🏆 FINAL"},
 ]
 
-# Todos os confrontos (para compatibilidade)
-MATA_MATA_CONFRONTOS = MATA_MATA_OITAVAS + MATA_MATA_QUARTAS + MATA_MATA_SEMIS + MATA_MATA_FINAL
+MATA_MATA_CONFRONTOS = (
+    [{"id": l["id"], "t1": l["t1"], "t2": l["t2"]} for l in MATA_MATA_OITAVAS_LABELS]
+    + MATA_MATA_QUARTAS + MATA_MATA_SEMIS + MATA_MATA_FINAL
+)
 
-# Fases disponíveis para palpite (controlado aqui):
-# Por enquanto apenas oitavas abertas. Quartas/Semis/Final travadas.
-MATA_MATA_LIBERADO = True          # Oitavas liberadas
-QUARTAS_LIBERADAS  = False         # Abrir após oitavas concluídas
-SEMIS_LIBERADAS    = False
-FINAL_LIBERADA     = False
+# Controles de fase (altere aqui para abrir fases conforme avança o torneio)
+MATA_MATA_LIBERADO  = True   # Oitavas abertas para palpite
+QUARTAS_LIBERADAS   = False  # Abre após todos os jogos de oitavas
+SEMIS_LIBERADAS     = False
+FINAL_LIBERADA      = False
 
 BRT = timezone(timedelta(hours=-3))
 DURACAO_JOGO_MIN = 110
 
-# Próximo jogo do Brasil para o countdown
 PROXIMO_JOGO_BRASIL = {
-    "nome":  "Brasil x Marrocos",
+    "nome":      "Brasil x Marrocos",
     "data_hora": datetime(2026, 6, 13, 19, 0, 0, tzinfo=BRT),
 }
 
@@ -427,20 +411,19 @@ def _jsonbin_url():
 
 def _banco_padrao():
     banco = {}
-    todos_ids = {c["id"]: "" for c in MATA_MATA_CONFRONTOS}
-    todos_placares = {c["id"]: [0, 0] for c in MATA_MATA_CONFRONTOS}
+    todos_ids_mm     = {c["id"]: "" for c in MATA_MATA_CONFRONTOS}
+    todos_placares_mm = {c["id"]: [0, 0] for c in MATA_MATA_CONFRONTOS}
     for amigo in AMIGOS:
         banco[amigo] = {
-            "travado": False,
-            "classificacao": {g: list(t) for g, t in GRUPOS_CONFIG.items()},
-            "placar_brasil": [0, 0, 0, 0, 0, 0],
-            "vencedores_mata_mata": dict(todos_ids),
-            "palpites_placar_mm": dict(todos_placares),
-            # trava por fase do mata-mata
-            "mm_oitavas_travadas": False,
-            "mm_quartas_travadas": False,
-            "mm_semis_travadas":   False,
-            "mm_final_travada":    False,
+            "travado":              False,
+            "classificacao":        {g: list(t) for g, t in GRUPOS_CONFIG.items()},
+            "placar_brasil":        [0, 0, 0, 0, 0, 0],
+            "vencedores_mata_mata": dict(todos_ids_mm),
+            "palpites_placar_mm":   dict(todos_placares_mm),
+            "mm_oitavas_travadas":  False,
+            "mm_quartas_travadas":  False,
+            "mm_semis_travadas":    False,
+            "mm_final_travada":     False,
         }
     return banco
 
@@ -461,20 +444,19 @@ def carregar_banco():
                 requests.put(_jsonbin_url(), json=banco_seguro, headers=_jsonbin_headers(), timeout=8)
                 return banco_seguro
 
-            todos_ids = {c["id"]: "" for c in MATA_MATA_CONFRONTOS}
-            todos_placares = {c["id"]: [0, 0] for c in MATA_MATA_CONFRONTOS}
+            todos_ids_mm     = {c["id"]: "" for c in MATA_MATA_CONFRONTOS}
+            todos_placares_mm = {c["id"]: [0, 0] for c in MATA_MATA_CONFRONTOS}
 
             for amigo in AMIGOS:
                 if amigo in dados:
                     d = dados[amigo]
-                    banco_seguro[amigo]["travado"]        = bool(d.get("travado", False))
-                    banco_seguro[amigo]["classificacao"]  = d.get("classificacao", banco_seguro[amigo]["classificacao"])
-                    banco_seguro[amigo]["placar_brasil"]  = d.get("placar_brasil", banco_seguro[amigo]["placar_brasil"])
-                    # Mata-mata: mescla para garantir todos os ids
+                    banco_seguro[amigo]["travado"]       = bool(d.get("travado", False))
+                    banco_seguro[amigo]["classificacao"] = d.get("classificacao", banco_seguro[amigo]["classificacao"])
+                    banco_seguro[amigo]["placar_brasil"] = d.get("placar_brasil", banco_seguro[amigo]["placar_brasil"])
                     mm_salvo = d.get("vencedores_mata_mata", {})
-                    banco_seguro[amigo]["vencedores_mata_mata"] = {**todos_ids, **mm_salvo}
+                    banco_seguro[amigo]["vencedores_mata_mata"] = {**todos_ids_mm, **mm_salvo}
                     pp_salvo = d.get("palpites_placar_mm", {})
-                    banco_seguro[amigo]["palpites_placar_mm"] = {**todos_placares, **pp_salvo}
+                    banco_seguro[amigo]["palpites_placar_mm"] = {**todos_placares_mm, **pp_salvo}
                     banco_seguro[amigo]["mm_oitavas_travadas"] = bool(d.get("mm_oitavas_travadas", False))
                     banco_seguro[amigo]["mm_quartas_travadas"] = bool(d.get("mm_quartas_travadas", False))
                     banco_seguro[amigo]["mm_semis_travadas"]   = bool(d.get("mm_semis_travadas", False))
@@ -483,7 +465,7 @@ def carregar_banco():
             return banco_seguro
 
         if resp.status_code in (401, 403):
-            st.warning("⚠️ JSONBin: chave de API inválida.")
+            st.warning("⚠️ JSONBin: chave de API inválida. Rodando em modo local.")
         elif resp.status_code == 404:
             st.warning("⚠️ JSONBin: bin não encontrado.")
 
@@ -495,12 +477,26 @@ def carregar_banco():
     return banco_seguro
 
 def salvar_banco(banco_completo):
+    """
+    Grava o banco completo no JSONBin via PUT.
+    PROTEÇÃO: preserva palpites de usuários travados no banco remoto.
+    """
     try:
         bin_id  = st.secrets.get("JSONBIN_ID", "")
         api_key = st.secrets.get("JSONBIN_KEY", "")
         if not bin_id or not api_key:
             st.session_state.banco = banco_completo
             return True
+
+        # Busca o banco remoto atual para proteção
+        resp_atual = requests.get(_jsonbin_url(), headers=_jsonbin_headers(), timeout=6)
+        if resp_atual.status_code == 200:
+            banco_remoto = resp_atual.json().get("record", {})
+            for amigo in AMIGOS:
+                if banco_remoto.get(amigo, {}).get("travado"):
+                    banco_completo[amigo]["classificacao"] = banco_remoto[amigo]["classificacao"]
+                    banco_completo[amigo]["placar_brasil"] = banco_remoto[amigo]["placar_brasil"]
+                    banco_completo[amigo]["travado"]       = True
 
         resp = requests.put(_jsonbin_url(), json=banco_completo, headers=_jsonbin_headers(), timeout=8)
         if resp.status_code == 200:
@@ -524,12 +520,10 @@ padrao = _banco_padrao()
 for amigo in AMIGOS:
     if amigo not in st.session_state.banco:
         st.session_state.banco[amigo] = padrao[amigo]
-    # Garante campos novos em bancos antigos
-    for campo in ["vencedores_mata_mata", "palpites_placar_mm",
-                  "mm_oitavas_travadas", "mm_quartas_travadas",
-                  "mm_semis_travadas", "mm_final_travada"]:
+    # Campos novos em bancos antigos
+    for campo, val in padrao[amigo].items():
         if campo not in st.session_state.banco[amigo]:
-            st.session_state.banco[amigo][campo] = padrao[amigo][campo]
+            st.session_state.banco[amigo][campo] = val
 
 # ==============================================================================
 # AUTENTICAÇÃO POR PIN
@@ -555,20 +549,22 @@ TRADUCAO = {
     "Brazil": "Brasil", "Haiti": "Haiti", "Morocco": "Marrocos", "Scotland": "Escócia",
     "Mexico": "México", "South Africa": "África do Sul",
     "Korea Republic": "Coreia do Sul", "Czech Republic": "Tchéquia", "Czechia": "Tchéquia",
-    "Bosnia and Herzegovina": "Bósnia e Herzegovina", "Canada": "Canadá",
-    "Qatar": "Catar", "Switzerland": "Suíça",
+    "Bosnia and Herzegovina": "Bósnia e Herzegovina", "Bosnia-Herzegovina": "Bósnia e Herzegovina",
+    "Canada": "Canadá", "Qatar": "Catar", "Switzerland": "Suíça",
     "Australia": "Austrália", "Paraguay": "Paraguai", "Turkey": "Turquia",
     "USA": "Estados Unidos", "United States": "Estados Unidos",
-    "Curaçao": "Curaçao", "Ecuador": "Equador", "Germany": "Alemanha",
+    "Curaçao": "Curaçao", "Curaþao": "Curaçao",
+    "Ecuador": "Equador", "Germany": "Alemanha",
     "Ivory Coast": "Costa do Marfim", "Cote d'Ivoire": "Costa do Marfim",
     "Japan": "Japão", "Netherlands": "Países Baixos", "Sweden": "Suécia", "Tunisia": "Tunísia",
     "Belgium": "Bélgica", "Egypt": "Egito", "Iran": "Irã", "New Zealand": "Nova Zelândia",
-    "Cape Verde": "Cabo Verde", "Saudi Arabia": "Arábia Saudita",
-    "Spain": "Espanha", "Uruguay": "Uruguai",
+    "Cape Verde": "Cabo Verde", "Cape Verde Islands": "Cabo Verde",
+    "Saudi Arabia": "Arábia Saudita", "Spain": "Espanha", "Uruguay": "Uruguai",
+    "South Korea": "Coreia do Sul",
     "France": "França", "Iraq": "Iraque", "Norway": "Noruega", "Senegal": "Senegal",
     "Algeria": "Argélia", "Argentina": "Argentina", "Austria": "Áustria", "Jordan": "Jordânia",
-    "Colombia": "Colômbia", "DR Congo": "RD Congo", "Portugal": "Portugal",
-    "Uzbekistan": "Uzbequistão",
+    "Colombia": "Colômbia", "DR Congo": "RD Congo", "Congo DR": "RD Congo",
+    "Portugal": "Portugal", "Uzbekistan": "Uzbequistão",
     "Croatia": "Croácia", "England": "Inglaterra", "Ghana": "Gana", "Panama": "Panamá",
 }
 
@@ -580,6 +576,7 @@ ALIASES_TIMES = {
     "Bósnia e Herzegovina": "Bósnia e Herzegovina",
     "Bosnia": "Bósnia e Herzegovina",
     "Bosnia and Herzegovina": "Bósnia e Herzegovina",
+    "Bosnia-Herzegovina": "Bósnia e Herzegovina",
     "USA": "Estados Unidos",
     "United States": "Estados Unidos",
     "United States of America": "Estados Unidos",
@@ -587,7 +584,15 @@ ALIASES_TIMES = {
     "Czechia": "Tchéquia",
 }
 
-RESULTADOS_MANUAIS = {}
+# Resultados já conhecidos (preenchimento manual como fallback de API)
+RESULTADOS_MANUAIS = {
+    "México x África do Sul":   {"placar_c": 2, "placar_f": 0},
+    "Tchéquia x Coreia do Sul": {"placar_c": 1, "placar_f": 2},
+    "Canadá x Bósnia":          {"placar_c": 1, "placar_f": 1},
+    "Estados Unidos x Paraguai":{"placar_c": 4, "placar_f": 1},
+    "Catar x Suíça":            {"placar_c": 1, "placar_f": 1},
+    "Brasil x Marrocos":        {"placar_c": 1, "placar_f": 1},
+}
 
 def _resultados_manuais():
     resultados = dict(RESULTADOS_MANUAIS)
@@ -598,6 +603,16 @@ def _resultados_manuais():
     except Exception:
         pass
     return resultados
+
+def _resultados_manuais_mm():
+    """Resultados do mata-mata via secrets. Formato: MM_M1, MM_Q1 etc."""
+    try:
+        raw = st.secrets.get("RESULTADOS_MM_JSON", "")
+        if raw:
+            return json.loads(raw)
+    except Exception:
+        pass
+    return {}
 
 def _agora_brt():
     return datetime.now(BRT)
@@ -701,10 +716,10 @@ def _jogos_do_calendario_fixo():
         status_cal = _status_por_data_hora(jogo["data"], jogo["hora"])
         placar_manual = resultados_manuais.get(jogo["jogo"], {})
         jogos.append({
-            "jogo": jogo["jogo"],
+            "jogo":     jogo["jogo"],
             "placar_c": placar_manual.get("placar_c"),
             "placar_f": placar_manual.get("placar_f"),
-            "status": "FINISHED" if status_cal == "finalizado" else ("IN_PLAY" if status_cal == "aovivo" else "SCHEDULED"),
+            "status":   "FINISHED" if status_cal == "finalizado" else ("IN_PLAY" if status_cal == "aovivo" else "SCHEDULED"),
             "fonte_resultado": "manual" if placar_manual else "calendário",
         })
     return jogos
@@ -770,7 +785,8 @@ def _classificacao_por_jogos(jogos_reais):
     for grupo, times in tabelas.items():
         classificacao[grupo] = sorted(
             times,
-            key=lambda t: (-times[t]["pts"], -times[t]["sg"], -times[t]["gp"], times[t]["idx"])
+            key=lambda t: (-tabelas[grupo][t]["pts"], -tabelas[grupo][t]["sg"],
+                           -tabelas[grupo][t]["gp"], tabelas[grupo][t]["idx"])
         )
     return classificacao
 
@@ -778,14 +794,15 @@ def _montar_resultado(jogos_reais, fonte, classificacao_real=None):
     for jogo in jogos_reais:
         jogo.setdefault("fonte_resultado", fonte)
     jogos_reais = _aplicar_overrides_calendario(jogos_reais)
-    gols_brasil = [None, None, None, None, None, None]
+
+    gols_brasil = [None] * 6
     idx_br = 0
     for j in jogos_reais:
         if j["status"] == "FINISHED" and idx_br < 3:
-            nome = j["jogo"]
             gc, gf = j["placar_c"], j["placar_f"]
             if gc is None or gf is None:
                 continue
+            nome = j["jogo"]
             if nome.startswith("Brasil"):
                 gols_brasil[idx_br * 2]     = gc
                 gols_brasil[idx_br * 2 + 1] = gf
@@ -794,19 +811,23 @@ def _montar_resultado(jogos_reais, fonte, classificacao_real=None):
                 gols_brasil[idx_br * 2]     = gf
                 gols_brasil[idx_br * 2 + 1] = gc
                 idx_br += 1
+
     classificacao_calculada = _classificacao_por_jogos(jogos_reais)
-    classificacao_final = {g: list(t) for g, t in GRUPOS_CONFIG.items()}
-    for grupo in classificacao_final:
-        if classificacao_real and grupo in classificacao_real:
+    classificacao_final = {}
+    for grupo in GRUPOS_CONFIG:
+        if classificacao_real and grupo in classificacao_real and len(classificacao_real[grupo]) == 4:
             classificacao_final[grupo] = classificacao_real[grupo]
         elif grupo in classificacao_calculada:
             classificacao_final[grupo] = classificacao_calculada[grupo]
+        else:
+            classificacao_final[grupo] = list(GRUPOS_CONFIG[grupo])
 
     return {
         "fonte":              fonte,
         "classificacao_real": classificacao_final,
         "jogos_reais":        jogos_reais,
         "gols_brasil":        gols_brasil,
+        "jogos_mata_mata":    [],
     }
 
 def _classificacao_football_data(token):
@@ -815,7 +836,6 @@ def _classificacao_football_data(token):
         r = requests.get(url, headers={"X-Auth-Token": token}, timeout=6)
         if r.status_code != 200:
             return {}
-
         retorno = {}
         for standing in r.json().get("standings", []):
             grupo_api = standing.get("group", "")
@@ -825,70 +845,78 @@ def _classificacao_football_data(token):
             nome_grupo = f"Grupo {letra}"
             if nome_grupo not in GRUPOS_CONFIG:
                 continue
-
             ordem = []
             for linha in standing.get("table", []):
                 nome_time = linha.get("team", {}).get("name", "")
                 nome_norm = _normalizar_time(nome_time)
                 time_local = next(
                     (t for t in GRUPOS_CONFIG[nome_grupo] if _normalizar_time(t) == nome_norm),
-                    nome_norm
+                    None
                 )
-                ordem.append(time_local)
-
+                if time_local:
+                    ordem.append(time_local)
             if ordem:
                 faltando = [t for t in GRUPOS_CONFIG[nome_grupo] if t not in ordem]
                 retorno[nome_grupo] = ordem + faltando
         return retorno
-    except Exception:
+    except Exception as e:
+        st.warning(f"⚠️ Erro ao buscar classificação da API: {e}")
         return {}
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=120)
 def obter_resultados():
     padrao = {
         "fonte":              "calendário fixo",
         "classificacao_real": {g: list(t) for g, t in GRUPOS_CONFIG.items()},
         "jogos_reais":        [],
-        "gols_brasil":        [None, None, None, None, None, None],
+        "gols_brasil":        [None] * 6,
         "jogos_mata_mata":    [],
     }
 
     # ── API 1: football-data.org ──────────────────────────────────────────────
     try:
-        token = st.secrets.get("FOOTBALL_DATA_TOKEN", "")
+        token = st.secrets.get("FOOTBALL_DATA_TOKEN", "52974ada524e459ea4cf52a9dcc19861")
         if token:
-            url = "https://api.football-data.org/v4/competitions/WC/matches?season=2026"
+            url = "https://api.football-data.org/v4/competitions/WC/matches"
             r = requests.get(url, headers={"X-Auth-Token": token}, timeout=6)
-            if r.status_code == 200:
+            if r.status_code != 200:
+                st.warning(f"⚠️ Football-Data retornou HTTP {r.status_code}. Usando dados manuais.")
+            else:
                 matches = r.json().get("matches", [])
-                if matches:
-                    jogos = []
-                    jogos_mm = []
+                if not matches:
+                    st.warning("⚠️ Football-Data retornou sem jogos.")
+                else:
+                    jogos_grupos = []
+                    jogos_mm     = []
+                    STAGES_MM = {"ROUND_OF_16", "QUARTER_FINALS", "SEMI_FINALS", "THIRD_PLACE", "FINAL"}
                     for m in matches:
-                        t_c    = _normalizar_time(m["homeTeam"]["name"])
-                        t_f    = _normalizar_time(m["awayTeam"]["name"])
-                        sc     = m.get("score", {}).get("fullTime", {})
+                        t_c   = _normalizar_time(m["homeTeam"]["name"])
+                        t_f   = _normalizar_time(m["awayTeam"]["name"])
+                        score = m.get("score") or {}
+                        ft    = score.get("fullTime") or {}
+                        gc    = ft.get("home", ft.get("homeTeam"))
+                        gf    = ft.get("away", ft.get("awayTeam"))
                         status = m.get("status", "SCHEDULED")
                         stage  = m.get("stage", "")
                         item = {
                             "jogo":     f"{t_c} x {t_f}",
-                            "placar_c": sc.get("home"),
-                            "placar_f": sc.get("away"),
+                            "placar_c": gc,
+                            "placar_f": gf,
                             "status":   _status_api_para_padrao(status),
                             "stage":    stage,
                         }
-                        if stage in ("ROUND_OF_16", "QUARTER_FINALS", "SEMI_FINALS",
-                                     "THIRD_PLACE", "FINAL"):
+                        if stage in STAGES_MM:
                             jogos_mm.append(item)
                         else:
-                            jogos.append(item)
+                            jogos_grupos.append(item)
 
+                    st.success(f"✅ Football-Data: {len(jogos_grupos)} jogos grupos, {len(jogos_mm)} mata-mata")
                     classificacao_api = _classificacao_football_data(token)
-                    resultado = _montar_resultado(jogos, "football-data.org", classificacao_api)
+                    resultado = _montar_resultado(jogos_grupos, "football-data.org", classificacao_api)
                     resultado["jogos_mata_mata"] = jogos_mm
                     return resultado
-    except Exception:
-        pass
+    except Exception as e:
+        st.error(f"❌ Erro football-data: {e}")
 
     # ── API 2: Zafronix Sports API ────────────────────────────────────────────
     try:
@@ -898,42 +926,71 @@ def obter_resultados():
         if r.status_code == 200:
             fixtures = r.json().get("fixtures", [])
             if fixtures:
-                jogos = []
-                jogos_mm = []
+                jogos_grupos = []
+                jogos_mm     = []
                 for m in fixtures:
                     t_c   = _normalizar_time(m.get("home_team", ""))
                     t_f   = _normalizar_time(m.get("away_team", ""))
                     gc    = m.get("home_score")
                     gf    = m.get("away_score")
                     st_   = m.get("status", "SCHEDULED")
-                    stage = m.get("stage", m.get("round", ""))
+                    stage = str(m.get("stage", m.get("round", ""))).upper()
                     item  = {
                         "jogo":     f"{t_c} x {t_f}",
                         "placar_c": gc,
                         "placar_f": gf,
                         "status":   _status_api_para_padrao(st_),
-                        "stage":    stage,
                     }
-                    stage_upper = str(stage).upper()
-                    if any(k in stage_upper for k in ["ROUND_OF_16", "QUARTER", "SEMI", "FINAL", "THIRD"]):
+                    if any(k in stage for k in ["ROUND_OF_16", "QUARTER", "SEMI", "FINAL", "THIRD"]):
                         jogos_mm.append(item)
                     else:
-                        jogos.append(item)
-                resultado = _montar_resultado(jogos, "Zafronix Sports API")
+                        jogos_grupos.append(item)
+                resultado = _montar_resultado(jogos_grupos, "Zafronix Sports API")
                 resultado["jogos_mata_mata"] = jogos_mm
                 return resultado
     except Exception:
         pass
 
+    # ── API 3: Sportmonks ────────────────────────────────────────────────────
+    try:
+        token_sm = st.secrets.get("SPORTMONKS_TOKEN", "")
+        if token_sm:
+            url = f"https://api.sportmonks.com/v3/football/fixtures?api_token={token_sm}&include=participants,scores"
+            r = requests.get(url, timeout=5)
+            if r.status_code == 200:
+                fixtures = r.json().get("data", [])
+                if fixtures:
+                    jogos = []
+                    for m in fixtures:
+                        participants = m.get("participants", [])
+                        if len(participants) < 2:
+                            continue
+                        t_c = _normalizar_time(participants[0].get("name", ""))
+                        t_f = _normalizar_time(participants[1].get("name", ""))
+                        scores = m.get("scores", {})
+                        gc  = scores.get("localteam_score")
+                        gf  = scores.get("visitorteam_score")
+                        st_ = m.get("state", {})
+                        state_name = st_.get("name", "") if isinstance(st_, dict) else str(st_)
+                        jogos.append({
+                            "jogo":     f"{t_c} x {t_f}",
+                            "placar_c": gc,
+                            "placar_f": gf,
+                            "status":   _status_api_para_padrao(state_name),
+                        })
+                    if jogos:
+                        resultado = _montar_resultado(jogos, "Sportmonks")
+                        return resultado
+    except Exception:
+        pass
+
     jogos_fallback = _jogos_do_calendario_fixo()
-    resultado = _montar_resultado(jogos_fallback, "calendário fixo")
-    resultado["jogos_mata_mata"] = []
-    return resultado
+    return _montar_resultado(jogos_fallback, "calendário fixo")
 
 api_data = obter_resultados()
 
 # ==============================================================================
-# HELPERS
+# HELPERS — classificação e mata-mata
 # ==============================================================================
 def _status_jogo(data_str, hora_str):
     return _status_por_data_hora(data_str, hora_str)
@@ -954,12 +1011,9 @@ def _countdown_brasil():
 
 def _grupos_com_resultado():
     finalizados = set()
-    jogos_reais = api_data.get("jogos_reais", [])
     for nome_grupo, times in GRUPOS_CONFIG.items():
-        for jogo in jogos_reais:
-            if jogo.get("status") != "FINISHED":
-                continue
-            if not _tem_placar(jogo):
+        for jogo in api_data.get("jogos_reais", []):
+            if jogo.get("status") != "FINISHED" or not _tem_placar(jogo):
                 continue
             t_c, t_f = _partes_jogo(jogo["jogo"])
             times_norm = {_normalizar_time(t) for t in times}
@@ -968,205 +1022,203 @@ def _grupos_com_resultado():
                 break
     return finalizados
 
-def _buscar_resultado_mm(nome_jogo_mm):
-    """Busca resultado de um jogo do mata-mata na API."""
-    for jogo in api_data.get("jogos_mata_mata", []):
-        t_c, t_f = _partes_jogo(jogo["jogo"])
-        # Tenta match por nome normalizado
-        mm_c, mm_f = _partes_jogo(nome_jogo_mm)
-        if (t_c == mm_c and t_f == mm_f) or (t_c == mm_f and t_f == mm_c):
-            return jogo
-    # Resultado manual via secrets
-    res_manual = _resultados_manuais()
-    if nome_jogo_mm in res_manual:
-        m = res_manual[nome_jogo_mm]
-        gc = m.get("placar_c")
-        gf = m.get("placar_f")
-        vencedor = None
-        if gc is not None and gf is not None:
-            c, f = _partes_jogo(nome_jogo_mm)
-            vencedor = c if gc > gf else (f if gf > gc else None)
-        return {
-            "jogo": nome_jogo_mm,
-            "placar_c": gc,
-            "placar_f": gf,
-            "status": "FINISHED" if gc is not None else "SCHEDULED",
-            "vencedor": vencedor,
-        }
+def _classificacao_real():
+    """Retorna a classificação real disponível (da API ou calculada)."""
+    return api_data.get("classificacao_real", {g: list(t) for g, t in GRUPOS_CONFIG.items()})
+
+def _nome_real_por_pos(grupo_letra, posicao):
+    """
+    Resolve '1º do Grupo E' para o nome real da seleção.
+    posicao: 1-based (1=primeiro, 2=segundo…)
+    Retorna None se classificação ainda não disponível.
+    """
+    nome_grupo = f"Grupo {grupo_letra}"
+    classificacao = _classificacao_real()
+    times = classificacao.get(nome_grupo, [])
+    idx = posicao - 1
+    if idx < len(times) and times[idx]:
+        return times[idx]
     return None
 
-def _todos_oitavas_finalizadas():
-    """Verifica se todas as oitavas já têm resultado."""
-    for conf in MATA_MATA_OITAVAS:
-        # Verifica se existe resultado manual/API para este confronto
-        # Por ora, usa os palpites de todos os amigos como proxy
-        # (em produção real, verificar API)
-        pass
-    # Simplificado: retorna QUARTAS_LIBERADAS para controle manual
-    return QUARTAS_LIBERADAS
+def _resolver_times_oitava(conf_def, labels):
+    """
+    Tenta resolver os nomes reais de uma oitava.
+    conf_def: {"id":..., "pos1": (letra, pos), "pos2": (letra, pos)}
+    labels:   {"id":..., "t1": "1º Grupo E", "t2": "3º colocado"}
+    Retorna (t1_display, t2_display) com nomes reais se disponíveis.
+    """
+    def _resolver(pos_tuple, label_fallback):
+        letra, pos = pos_tuple
+        if letra == "?" or pos == 0:
+            return label_fallback  # 3º colocado ainda indefinido
+        nome = _nome_real_por_pos(letra, pos)
+        return nome if nome else label_fallback
+
+    t1 = _resolver(conf_def["pos1"], labels["t1"])
+    t2 = _resolver(conf_def["pos2"], labels["t2"])
+    return t1, t2
+
+def _buscar_resultado_mm_api(t1, t2):
+    """Busca resultado de um jogo do mata-mata pelos nomes dos times."""
+    t1n = _normalizar_time(t1)
+    t2n = _normalizar_time(t2)
+    for jogo in api_data.get("jogos_mata_mata", []):
+        jc, jf = _partes_jogo(jogo["jogo"])
+        if (jc == t1n and jf == t2n) or (jc == t2n and jf == t1n):
+            return jogo
+    return None
+
+def _resultado_mm(conf_id, t1, t2):
+    """
+    Retorna dict com placar e vencedor de um jogo do mata-mata.
+    Prioridade: resultado manual (secrets) > API > None
+    """
+    # 1. Manual via secrets (chave MM_M1, MM_Q1…)
+    manuais = _resultados_manuais_mm()
+    manual = manuais.get(f"MM_{conf_id}")
+    if manual:
+        gc = manual.get("placar_c")
+        gf = manual.get("placar_f")
+        tc = manual.get("time_casa", t1)
+        tf = manual.get("time_fora", t2)
+        venc = manual.get("vencedor", "")
+        if not venc and gc is not None and gf is not None and gc != gf:
+            venc = tc if gc > gf else tf
+        return {"placar_c": gc, "placar_f": gf, "time_casa": tc, "time_fora": tf,
+                "vencedor": venc, "fonte": "manual"}
+    # 2. API
+    if t1 and t2 and "colocado" not in t1 and "Venc." not in t1:
+        jogo_api = _buscar_resultado_mm_api(t1, t2)
+        if jogo_api and jogo_api.get("status") == "FINISHED" and _tem_placar(jogo_api):
+            gc = jogo_api["placar_c"]
+            gf = jogo_api["placar_f"]
+            jc, jf = _partes_jogo(jogo_api["jogo"])
+            # Garante correspondência casa/fora com t1/t2
+            t1n = _normalizar_time(t1)
+            if jc == t1n:
+                gc_t1, gf_t2 = gc, gf
+            else:
+                gc_t1, gf_t2 = gf, gc
+            venc = t1 if gc_t1 > gf_t2 else (t2 if gf_t2 > gc_t1 else "")
+            return {"placar_c": gc_t1, "placar_f": gf_t2,
+                    "time_casa": t1, "time_fora": t2,
+                    "vencedor": venc, "fonte": "API"}
+    return None
 
 def _calcular_pontuacao(amigo):
-    """Calcula pontuação de um amigo. Retorna (total, detalhes)."""
-    user     = st.session_state.banco[amigo]
-    real     = api_data
-    total    = 0
-    detalhes = []
+    user  = st.session_state.banco[amigo]
+    real  = api_data
+    total = 0
+    dets  = []
 
     if not user["travado"]:
         return 0, []
 
     grupos_ativos = _grupos_com_resultado()
 
-    # ── Pontuação de grupos ──
-    pts_grupos = 0
+    # ── Grupos ──
     for g in GRUPOS_CONFIG:
         if g not in grupos_ativos:
             continue
-        palpite_1 = user["classificacao"][g][0]
-        palpite_2 = user["classificacao"][g][1]
-        real_1 = real["classificacao_real"][g][0]
-        real_2 = real["classificacao_real"][g][1]
+        for pos_idx, pos_label in [(0, "1º"), (1, "2º")]:
+            palpite = user["classificacao"][g][pos_idx]
+            real_t  = real["classificacao_real"][g][pos_idx]
+            acertou = _normalizar_time(palpite) == _normalizar_time(real_t)
+            pts     = 2 if acertou else 0
+            total  += pts
+            dets.append({"cat": g,
+                         "texto": f"{pos_label} colocado: palpite {palpite}; atual {real_t}",
+                         "pts": pts, "status": "ok" if acertou else "err"})
 
-        acertou_1 = _normalizar_time(palpite_1) == _normalizar_time(real_1)
-        pts_1 = 2 if acertou_1 else 0
-        pts_grupos += pts_1
-        detalhes.append({
-            "cat": g,
-            "texto": f"1º colocado: palpite {palpite_1}; atual {real_1}",
-            "pts": pts_1,
-            "status": "ok" if acertou_1 else "err",
-        })
-
-        acertou_2 = _normalizar_time(palpite_2) == _normalizar_time(real_2)
-        pts_2 = 2 if acertou_2 else 0
-        pts_grupos += pts_2
-        detalhes.append({
-            "cat": g,
-            "texto": f"2º colocado: palpite {palpite_2}; atual {real_2}",
-            "pts": pts_2,
-            "status": "ok" if acertou_2 else "err",
-        })
-    total += pts_grupos
-
-    # ── Pontuação dos jogos do Brasil ──
-    pts_brasil = 0
+    # ── Jogos do Brasil ──
     for i in range(3):
-        b     = i * 2
-        p_br  = user["placar_brasil"][b]
-        p_adv = user["placar_brasil"][b + 1]
-        r_br  = real["gols_brasil"][b]
-        r_adv = real["gols_brasil"][b + 1]
-        nome_jogo = JOGOS_BRASIL[i]["jogo"]
-        if r_br is None or r_adv is None:
-            detalhes.append({
-                "cat": "Jogos do Brasil",
-                "texto": f"{nome_jogo}: palpite {p_br}x{p_adv}; aguardando resultado",
-                "pts": 0,
-                "status": "wait",
-            })
+        b    = i * 2
+        p_br = user["placar_brasil"][b]
+        p_ad = user["placar_brasil"][b + 1]
+        r_br = real["gols_brasil"][b]
+        r_ad = real["gols_brasil"][b + 1]
+        nj   = JOGOS_BRASIL[i]["jogo"]
+        if r_br is None or r_ad is None:
+            dets.append({"cat": "Jogos do Brasil",
+                         "texto": f"{nj}: palpite {p_br}x{p_ad}; aguardando resultado",
+                         "pts": 0, "status": "wait"})
             continue
-        if p_br == r_br and p_adv == r_adv:
-            pts_jogo = 5
-            status = "ok"
-            texto = f"{nome_jogo}: placar exato! palpite {p_br}x{p_adv}; real {r_br}x{r_adv}"
-        elif (
-            (p_br > p_adv and r_br > r_adv) or
-            (p_br < p_adv and r_br < r_adv) or
-            (p_br == p_adv and r_br == r_adv)
-        ):
-            pts_jogo = 3
-            status = "ok"
-            texto = f"{nome_jogo}: resultado correto; palpite {p_br}x{p_adv}; real {r_br}x{r_adv}"
+        if p_br == r_br and p_ad == r_ad:
+            pts, st_ = 5, "ok"
+            texto = f"{nj}: placar exato! {p_br}x{p_ad}; real {r_br}x{r_ad}"
+        elif ((p_br > p_ad and r_br > r_ad) or (p_br < p_ad and r_br < r_ad)
+              or (p_br == p_ad and r_br == r_ad)):
+            pts, st_ = 3, "ok"
+            texto = f"{nj}: resultado correto; palpite {p_br}x{p_ad}; real {r_br}x{r_ad}"
         else:
-            pts_jogo = 0
-            status = "err"
-            texto = f"{nome_jogo}: palpite {p_br}x{p_adv}; real {r_br}x{r_adv}"
-        pts_brasil += pts_jogo
-        detalhes.append({
-            "cat": "Jogos do Brasil",
-            "texto": texto,
-            "pts": pts_jogo,
-            "status": status,
-        })
-    total += pts_brasil
+            pts, st_ = 0, "err"
+            texto = f"{nj}: palpite {p_br}x{p_ad}; real {r_br}x{r_ad}"
+        total += pts
+        dets.append({"cat": "Jogos do Brasil", "texto": texto, "pts": pts, "status": st_})
 
-    # ── Pontuação do Mata-Mata ──
-    pts_mm = 0
-    todas_fases = [
-        ("Oitavas de Final", MATA_MATA_OITAVAS, "mm_oitavas_travadas"),
-        ("Quartas de Final", MATA_MATA_QUARTAS, "mm_quartas_travadas"),
-        ("Semifinais",       MATA_MATA_SEMIS,   "mm_semis_travadas"),
-        ("Final",            MATA_MATA_FINAL,   "mm_final_travada"),
+    # ── Mata-Mata ──
+    fases_mm = [
+        ("Oitavas de Final", "mm_oitavas_travadas",
+         list(zip(MATA_MATA_OITAVAS_DEF, MATA_MATA_OITAVAS_LABELS))),
+        ("Quartas de Final", "mm_quartas_travadas",
+         [(None, c) for c in MATA_MATA_QUARTAS]),
+        ("Semifinais",       "mm_semis_travadas",
+         [(None, c) for c in MATA_MATA_SEMIS]),
+        ("Final",            "mm_final_travada",
+         [(None, c) for c in MATA_MATA_FINAL]),
     ]
-    for nome_fase, confrontos, campo_trava in todas_fases:
+    for nome_fase, campo_trava, pares in fases_mm:
         if not user.get(campo_trava):
             continue
-        for conf in confrontos:
-            cid = conf["id"]
+        for conf_def, conf_label in pares:
+            cid = conf_label["id"]
+            # Resolve nomes reais
+            if conf_def:
+                t1_r, t2_r = _resolver_times_oitava(conf_def, conf_label)
+            else:
+                t1_r, t2_r = conf_label["t1"], conf_label["t2"]
+
             palpite_venc  = user["vencedores_mata_mata"].get(cid, "")
-            palpite_placar = user["palpites_placar_mm"].get(cid, [0, 0])
+            palpite_pl    = user["palpites_placar_mm"].get(cid, [0, 0])
+            resultado     = _resultado_mm(cid, t1_r, t2_r)
+
             if not palpite_venc:
-                detalhes.append({
-                    "cat": f"Mata-Mata ({nome_fase})",
-                    "texto": f"{conf['t1']} vs {conf['t2']}: sem palpite",
-                    "pts": 0,
-                    "status": "err",
-                })
+                dets.append({"cat": f"Mata-Mata ({nome_fase})",
+                             "texto": f"{t1_r} vs {t2_r}: sem palpite",
+                             "pts": 0, "status": "err"})
                 continue
-            # Busca resultado real da API
-            # Nome real do jogo ainda não disponível na estrutura simplificada
-            # Usa o id do confronto como chave para resultados manuais
-            resultado_real = _resultados_manuais().get(f"MM_{cid}")
-            if not resultado_real:
-                detalhes.append({
-                    "cat": f"Mata-Mata ({nome_fase})",
-                    "texto": f"{conf['t1']} vs {conf['t2']}: aguardando resultado real",
-                    "pts": 0,
-                    "status": "wait",
-                })
-                continue
-            real_venc   = resultado_real.get("vencedor", "")
-            real_gc     = resultado_real.get("placar_c")
-            real_gf     = resultado_real.get("placar_f")
-            if not real_venc:
-                detalhes.append({
-                    "cat": f"Mata-Mata ({nome_fase})",
-                    "texto": f"{conf['t1']} vs {conf['t2']}: aguardando resultado",
-                    "pts": 0,
-                    "status": "wait",
-                })
+            if not resultado:
+                dets.append({"cat": f"Mata-Mata ({nome_fase})",
+                             "texto": f"{t1_r} vs {t2_r}: aguardando resultado",
+                             "pts": 0, "status": "wait"})
                 continue
 
-            p_gc = palpite_placar[0] if isinstance(palpite_placar, list) and len(palpite_placar) >= 2 else 0
-            p_gf = palpite_placar[1] if isinstance(palpite_placar, list) and len(palpite_placar) >= 2 else 0
+            real_venc = resultado.get("vencedor", "")
+            real_gc   = resultado.get("placar_c")
+            real_gf   = resultado.get("placar_f")
+            p_gc = palpite_pl[0] if isinstance(palpite_pl, list) and len(palpite_pl) >= 2 else 0
+            p_gf = palpite_pl[1] if isinstance(palpite_pl, list) and len(palpite_pl) >= 2 else 0
 
-            acertou_placar = (real_gc is not None and real_gf is not None and
-                              p_gc == real_gc and p_gf == real_gf)
-            acertou_venc = (palpite_venc == real_venc)
+            acertou_placar = (real_gc is not None and real_gf is not None
+                              and p_gc == real_gc and p_gf == real_gf)
+            acertou_venc   = bool(palpite_venc and real_venc
+                                  and _normalizar_time(palpite_venc) == _normalizar_time(real_venc))
 
             if acertou_placar:
-                pts_conf = 5
-                st_conf = "ok"
-                texto = f"{conf['t1']} vs {conf['t2']}: placar exato! {p_gc}x{p_gf}; venc. {real_venc}"
+                pts, st_ = 5, "ok"
+                texto = f"{t1_r} vs {t2_r}: placar exato! {p_gc}x{p_gf}; venc. {real_venc}"
             elif acertou_venc:
-                pts_conf = 3
-                st_conf = "ok"
-                texto = f"{conf['t1']} vs {conf['t2']}: vencedor correto ({palpite_venc})"
+                pts, st_ = 3, "ok"
+                texto = f"{t1_r} vs {t2_r}: vencedor correto ({palpite_venc})"
             else:
-                pts_conf = 0
-                st_conf = "err"
-                texto = f"{conf['t1']} vs {conf['t2']}: palpite {palpite_venc}; real {real_venc}"
+                pts, st_ = 0, "err"
+                texto = f"{t1_r} vs {t2_r}: palpite {palpite_venc}; real {real_venc or '?'}"
 
-            pts_mm += pts_conf
-            detalhes.append({
-                "cat": f"Mata-Mata ({nome_fase})",
-                "texto": texto,
-                "pts": pts_conf,
-                "status": st_conf,
-            })
-    total += pts_mm
+            total += pts
+            dets.append({"cat": f"Mata-Mata ({nome_fase})",
+                         "texto": texto, "pts": pts, "status": st_})
 
-    return total, detalhes
+    return total, dets
 
 # ==============================================================================
 # CABEÇALHO
@@ -1184,6 +1236,31 @@ if resultado_countdown:
     </div>
     """, unsafe_allow_html=True)
 
+# ── SIDEBAR: Diagnostics ──────────────────────────────────────────────────────
+with st.sidebar:
+    with st.expander("🔧 Diagnostics (Debug)"):
+        token_fd = st.secrets.get("FOOTBALL_DATA_TOKEN", "52974ada524e459ea4cf52a9dcc19861")
+        st.write(f"**Token Football-Data:** {token_fd[:10]}...{token_fd[-5:] if len(token_fd) > 15 else ''}")
+        if st.button("🔄 Limpar cache & recarregar"):
+            st.cache_data.clear()
+            st.rerun()
+        st.write(f"**Fonte:** `{api_data.get('fonte', '?')}`")
+        st.write(f"**Gols Brasil:** {api_data.get('gols_brasil', [])}")
+        st.write(f"**Jogos grupos:** {len(api_data.get('jogos_reais', []))}")
+        st.write(f"**Jogos mata-mata:** {len(api_data.get('jogos_mata_mata', []))}")
+
+# ── Status fonte ──────────────────────────────────────────────────────────────
+fonte_dados = api_data.get("fonte", "calendário fixo")
+gols_api    = api_data.get("gols_brasil", [None] * 6)
+tem_resultado_api = any(g is not None for g in gols_api)
+
+if fonte_dados == "football-data.org" and tem_resultado_api:
+    st.info(f"✅ Resultados sincronizados via **{fonte_dados}**.")
+elif fonte_dados == "football-data.org":
+    st.info(f"🔄 Conectado a **{fonte_dados}**, nenhum jogo finalizado ainda.")
+else:
+    st.info(f"📅 Usando {fonte_dados} como fonte de dados.")
+
 # ==============================================================================
 # SELEÇÃO DE USUÁRIO + AUTENTICAÇÃO PIN
 # ==============================================================================
@@ -1199,15 +1276,14 @@ if st.session_state.ultimo_usuario != usuario_selecionado:
     st.session_state.ultimo_usuario = usuario_selecionado
 
 dados_usuario = st.session_state.banco[usuario_selecionado]
-autenticado = (st.session_state.usuario_autenticado == usuario_selecionado)
+autenticado   = (st.session_state.usuario_autenticado == usuario_selecionado)
 modo_view_only = not autenticado
 
 with col_pin:
     if not autenticado:
-        pin_input = st.text_input(
-            "🔑 PIN", type="password", max_chars=6, placeholder="••••",
-            key=f"pin_{usuario_selecionado}", label_visibility="visible"
-        )
+        pin_input = st.text_input("🔑 PIN", type="password", max_chars=6,
+                                  placeholder="••••", key=f"pin_{usuario_selecionado}",
+                                  label_visibility="visible")
         if pin_input:
             if pin_input == PINS[usuario_selecionado]:
                 banco_fresco = carregar_banco()
@@ -1272,34 +1348,22 @@ with aba_grupos:
             col1, col2 = st.columns(2)
             t1 = col1.selectbox("🥇 1º", lista_times, index=lista_times.index(ordem[0]), key=f"t1_{nome_grupo}")
             if t1 != ordem[0]:
-                idx = ordem.index(t1)
-                ordem[idx] = ordem[0]
-                ordem[0] = t1
-                dados_usuario["classificacao"][nome_grupo] = ordem
-                st.rerun()
-
+                idx = ordem.index(t1); ordem[idx] = ordem[0]; ordem[0] = t1
+                dados_usuario["classificacao"][nome_grupo] = ordem; st.rerun()
             opcoes_2 = [t for t in lista_times if t != t1]
             t2 = col2.selectbox("🥈 2º", opcoes_2,
                                 index=opcoes_2.index(ordem[1]) if ordem[1] in opcoes_2 else 0,
                                 key=f"t2_{nome_grupo}")
             if t2 != ordem[1]:
-                idx = ordem.index(t2)
-                ordem[idx] = ordem[1]
-                ordem[1] = t2
-                dados_usuario["classificacao"][nome_grupo] = ordem
-                st.rerun()
-
+                idx = ordem.index(t2); ordem[idx] = ordem[1]; ordem[1] = t2
+                dados_usuario["classificacao"][nome_grupo] = ordem; st.rerun()
             opcoes_3 = [t for t in lista_times if t != t1 and t != t2]
             t3 = col1.selectbox("🥉 3º", opcoes_3,
                                 index=opcoes_3.index(ordem[2]) if ordem[2] in opcoes_3 else 0,
                                 key=f"t3_{nome_grupo}")
             if t3 != ordem[2]:
-                idx = ordem.index(t3)
-                ordem[idx] = ordem[2]
-                ordem[2] = t3
-                dados_usuario["classificacao"][nome_grupo] = ordem
-                st.rerun()
-
+                idx = ordem.index(t3); ordem[idx] = ordem[2]; ordem[2] = t3
+                dados_usuario["classificacao"][nome_grupo] = ordem; st.rerun()
             t4 = [t for t in lista_times if t not in [t1, t2, t3]][0]
             ordem[3] = t4
             col2.markdown(f"<p style='margin-top:28px;font-size:13px;color:#94a3b8;'>❌ 4º: {t4}</p>", unsafe_allow_html=True)
@@ -1309,22 +1373,17 @@ with aba_grupos:
         jogos_com_placar = _jogos_do_grupo(nome_grupo, apenas_com_placar=True)
         if jogos_com_placar:
             atual = api_data["classificacao_real"].get(nome_grupo, lista_times)
-            ordem_atual = " &nbsp;|&nbsp; ".join(f"{pos + 1}º {time}" for pos, time in enumerate(atual))
-            linhas_resultados = "".join(
-                f'<div class="real-line">⚽ {_formatar_placar(jogo)} '
-                f'<span style="color:#94a3b8;">({jogo.get("fonte_resultado", api_data["fonte"])})</span></div>'
-                for jogo in jogos_com_placar
+            ordem_atual = " &nbsp;|&nbsp; ".join(f"{p + 1}º {t}" for p, t in enumerate(atual))
+            linhas_res = "".join(
+                f'<div class="real-line">⚽ {_formatar_placar(j)} '
+                f'<span style="color:#94a3b8;">({j.get("fonte_resultado", api_data["fonte"])})</span></div>'
+                for j in jogos_com_placar
             )
-            st.markdown(f"""
-            <div class="real-box">
-                <div class="real-title">Classificação atual</div>
-                <div class="real-line">{ordem_atual}</div>
-                {linhas_resultados}
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(f'<div class="real-box"><div class="real-title">Classificação atual</div>'
+                        f'<div class="real-line">{ordem_atual}</div>{linhas_res}</div>', unsafe_allow_html=True)
         else:
-            st.markdown('<div class="real-box"><div class="real-title">Classificação atual</div><div class="real-line">Aguardando resultados com placar.</div></div>', unsafe_allow_html=True)
-
+            st.markdown('<div class="real-box"><div class="real-title">Classificação atual</div>'
+                        '<div class="real-line">Aguardando resultados com placar.</div></div>', unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
     # ── Jogos do Brasil ──────────────────────────────────────────────────────
@@ -1337,30 +1396,51 @@ with aba_grupos:
         st.caption(f"📍 {jogo_info['loc']}")
         b = idx * 2
 
+        gols_api_br = api_data.get("gols_brasil", [None] * 6)
+        tem_res_api = gols_api_br[b] is not None and gols_api_br[b + 1] is not None
+        jogo_fin_api = any(jogo_info["jogo"] in j["jogo"] and j.get("status") == "FINISHED"
+                           for j in api_data.get("jogos_reais", []))
+        badge_fonte = ""
+        if tem_res_api and jogo_fin_api:
+            badge_fonte = '<span style="color:#15803d;font-size:11px;font-weight:600;">✅ Football-Data.org</span>'
+        else:
+            rm = _resultados_manuais()
+            if rm.get(jogo_info["jogo"], {}).get("placar_c") is not None:
+                badge_fonte = '<span style="color:#ca8a04;font-size:11px;font-weight:600;">✏️ Preenchimento manual</span>'
+
         if travado_ou_view:
             if dados_usuario["travado"]:
-                g_br_salvo  = int(dados_usuario["placar_brasil"][b])
-                g_adv_salvo = int(dados_usuario["placar_brasil"][b + 1])
+                g_br_s  = int(dados_usuario["placar_brasil"][b])
+                g_adv_s = int(dados_usuario["placar_brasil"][b + 1])
                 st.markdown(
-                    f"<div style='text-align:center; font-size:22px; font-weight:800; color:#15803d; padding: 8px 0;'>"
-                    f"🇧🇷 Brasil {g_br_salvo} × {g_adv_salvo} Adversário</div>",
-                    unsafe_allow_html=True
-                )
-                palpites_gols[b]     = g_br_salvo
-                palpites_gols[b + 1] = g_adv_salvo
+                    f"<div style='text-align:center;font-size:22px;font-weight:800;color:#15803d;padding:8px 0;'>"
+                    f"🇧🇷 Brasil {g_br_s} × {g_adv_s} Adversário</div>", unsafe_allow_html=True)
+                palpites_gols[b] = g_br_s; palpites_gols[b + 1] = g_adv_s
             else:
                 st.markdown("<span style='color:#94a3b8;font-size:13px;'>🔒 Faça login para ver e editar seus palpites de placar</span>", unsafe_allow_html=True)
         else:
             c1, c2 = st.columns(2)
             g_br  = c1.number_input("Gols Brasil", min_value=0, max_value=20,
-                                    value=int(dados_usuario["placar_brasil"][b]),
-                                    step=1, key=f"gbr_{idx}")
+                                    value=int(dados_usuario["placar_brasil"][b]), step=1, key=f"gbr_{idx}")
             g_adv = c2.number_input("Gols Adversário", min_value=0, max_value=20,
-                                    value=int(dados_usuario["placar_brasil"][b + 1]),
-                                    step=1, key=f"gadv_{idx}")
-            palpites_gols[b]     = g_br
-            palpites_gols[b + 1] = g_adv
+                                    value=int(dados_usuario["placar_brasil"][b + 1]), step=1, key=f"gadv_{idx}")
+            palpites_gols[b] = g_br; palpites_gols[b + 1] = g_adv
 
+        # Resultado real
+        r_br  = api_data.get("gols_brasil", [None]*6)[b]
+        r_adv = api_data.get("gols_brasil", [None]*6)[b + 1]
+        t_c, t_f = _partes_jogo(jogo_info["jogo"])
+        adversario = t_f if t_c == "Brasil" else t_c
+
+        if r_br is not None and r_adv is not None:
+            placar_str = (f"Brasil {r_br} × {r_adv} {adversario}" if t_c == "Brasil"
+                          else f"{adversario} {r_adv} × {r_br} Brasil")
+            fonte_str = badge_fonte or f'<span style="color:#94a3b8;font-size:11px;">{api_data["fonte"]}</span>'
+            st.markdown(f'<div class="real-box"><div class="real-title">Resultado real</div>'
+                        f'<div class="real-line">⚽ {placar_str} {fonte_str}</div></div>', unsafe_allow_html=True)
+        else:
+            st.markdown('<div class="real-box"><div class="real-title">Resultado real</div>'
+                        '<div class="real-line">Aguardando resultado.</div></div>', unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
     # ── Botão de Trava ────────────────────────────────────────────────────────
@@ -1369,41 +1449,29 @@ with aba_grupos:
         chave_trava = f"disparar_trava_{usuario_selecionado}"
         if chave_trava not in st.session_state:
             st.session_state[chave_trava] = False
-
         if not st.session_state[chave_trava]:
             if st.button("🚨 Salvar palpites definitivos", key="btn_salvar"):
-                st.session_state[chave_trava] = True
-                st.rerun()
+                st.session_state[chave_trava] = True; st.rerun()
         else:
-            st.markdown("""
-            <div class="cuzao-box">
-                <p class="cuzao-title">⚠️ Tem certeza, cuzão?</p>
-                <p class="cuzao-sub">Depois disso não dá pra editar mais nada. Juro.</p>
-            </div>
-            """, unsafe_allow_html=True)
-
+            st.markdown('<div class="cuzao-box"><p class="cuzao-title">⚠️ Tem certeza, cuzão?</p>'
+                        '<p class="cuzao-sub">Depois disso não dá pra editar mais nada. Juro.</p></div>', unsafe_allow_html=True)
             col_sim, col_nao = st.columns(2)
             if col_sim.button("🔥 Sim, quero travar!", key="btn_sim"):
                 banco_atual = carregar_banco()
                 if banco_atual[usuario_selecionado]["travado"]:
-                    st.warning("Seus palpites já estavam travados. Nenhuma alteração feita.")
+                    st.warning("Seus palpites já estavam travados.")
                 else:
-                    banco_atual[usuario_selecionado]["classificacao"] = {
-                        g: list(palpites_grupos.get(g, v)) for g, v in GRUPOS_CONFIG.items()
-                    }
-                    banco_atual[usuario_selecionado]["placar_brasil"] = palpites_gols
-                    banco_atual[usuario_selecionado]["travado"] = True
+                    banco_atual[usuario_selecionado]["classificacao"] = {g: list(palpites_grupos.get(g, v)) for g, v in GRUPOS_CONFIG.items()}
+                    banco_atual[usuario_selecionado]["placar_brasil"]  = palpites_gols
+                    banco_atual[usuario_selecionado]["travado"]        = True
                     ok = salvar_banco(banco_atual)
                     if ok:
-                        st.success("✅ Palpites travados com sucesso! Boa sorte! 🍀")
+                        st.success("✅ Palpites travados! Boa sorte! 🍀")
                     else:
-                        st.error("Falha ao salvar. Tente novamente.")
-                st.session_state[chave_trava] = False
-                st.rerun()
-
+                        st.error("Falha ao salvar.")
+                st.session_state[chave_trava] = False; st.rerun()
             if col_nao.button("❌ Não, quero revisar", key="btn_nao"):
-                st.session_state[chave_trava] = False
-                st.rerun()
+                st.session_state[chave_trava] = False; st.rerun()
 
 # ──────────────────────────────────────────────────────────────────────────────
 # ABA 2: MATA-MATA
@@ -1413,345 +1481,246 @@ with aba_matamata:
 
     if not MATA_MATA_LIBERADO:
         st.info("🔒 Esta aba ficará disponível após o encerramento da fase de grupos.")
-        st.stop()
+    else:
+        # Coletores locais para o botão de salvar
+        palpites_mm_venc   = dict(dados_usuario["vencedores_mata_mata"])
+        palpites_mm_placar = {k: list(v) if isinstance(v, list) else [0, 0]
+                              for k, v in dados_usuario["palpites_placar_mm"].items()}
 
-    # Coletores de palpites do mata-mata desta sessão (para o botão de salvar)
-    palpites_mm_venc   = dict(dados_usuario["vencedores_mata_mata"])
-    palpites_mm_placar = {k: list(v) for k, v in dados_usuario["palpites_placar_mm"].items()}
+        # ======================================================================
+        # FUNÇÃO AUXILIAR: renderiza uma fase
+        # ======================================================================
+        def _render_fase_mm(nome_fase, confrontos_pares, campo_trava,
+                             fase_liberada, fase_anterior_ok, prefixo):
+            """
+            confrontos_pares: list of (conf_def_ou_None, conf_label_dict)
+            """
+            st.markdown(f'<div class="mm-fase-header">🏆 {nome_fase}</div>', unsafe_allow_html=True)
+            usuario_travou = dados_usuario.get(campo_trava, False)
 
-    # ===========================================================================
-    # FUNÇÃO AUXILIAR: renderiza uma fase do mata-mata
-    # ===========================================================================
-    def _render_fase(nome_fase, confrontos, campo_trava,
-                     fase_liberada, fase_anterior_encerrada,
-                     prefixo_key):
-        """
-        Renderiza os confrontos de uma fase.
+            if not fase_liberada and not fase_anterior_ok:
+                st.markdown('<div class="mm-fase-locked">🔒 Disponível após o encerramento da fase anterior</div>', unsafe_allow_html=True)
+                return
 
-        fase_liberada: True se esta fase está globalmente aberta para palpites.
-        fase_anterior_encerrada: True se a fase anterior já foi concluída
-                                  (controla o desbloqueio automático).
-        campo_trava: chave no banco que indica se o usuário travou esta fase.
-        """
-        st.markdown(f'<div class="mm-fase-header">🏆 {nome_fase}</div>', unsafe_allow_html=True)
+            if usuario_travou:
+                st.markdown('<div class="status-travado" style="margin-bottom:10px;">🔒 Palpites desta fase travados!</div>', unsafe_allow_html=True)
 
-        usuario_travou_fase = dados_usuario.get(campo_trava, False)
+            cols = st.columns(2)
 
-        if not fase_liberada and not fase_anterior_encerrada:
-            st.markdown(
-                f'<div class="mm-fase-locked">🔒 Disponível após o encerramento da fase anterior</div>',
-                unsafe_allow_html=True
-            )
-            return False  # Nada foi modificado
+            for i, (conf_def, conf_label) in enumerate(confrontos_pares):
+                cid = conf_label["id"]
+                titulo_fase = conf_label.get("label", f"Confronto {cid}")
 
-        if usuario_travou_fase:
-            st.markdown(
-                '<div class="status-travado" style="margin-bottom:10px;">🔒 Seus palpites desta fase estão travados!</div>',
-                unsafe_allow_html=True
-            )
-
-        cols = st.columns(2)
-        algo_alterado = False
-
-        for i, conf in enumerate(confrontos):
-            col = cols[i % 2]
-            cid = conf["id"]
-            label = conf.get("label", f"Confronto {cid}")
-
-            # Busca resultado real da API para este confronto
-            resultado_real_api = None
-            for jm in api_data.get("jogos_mata_mata", []):
-                t_c, t_f = _partes_jogo(jm["jogo"])
-                if t_c and t_f:
-                    # Tenta associar por times conhecidos
-                    resultado_real_api = jm  # simplificado; em produção associar por id
-
-            # Resultado manual via secrets key "MM_<cid>"
-            res_manual_conf = _resultados_manuais().get(f"MM_{cid}")
-
-            with col:
-                st.markdown(f'<div class="mm-card">', unsafe_allow_html=True)
-                st.markdown(f'<div class="mm-id">{label if label != f"Confronto {cid}" else f"Confronto {cid}"} — {cid}</div>', unsafe_allow_html=True)
-
-                # Times (usa nomes reais se disponíveis, senão usa placeholders)
-                t1_display = conf["t1"]
-                t2_display = conf["t2"]
-                if res_manual_conf:
-                    t1_real = res_manual_conf.get("time_casa", conf["t1"])
-                    t2_real = res_manual_conf.get("time_fora", conf["t2"])
-                    t1_display = t1_real
-                    t2_display = t2_real
-
-                st.markdown(f'<div class="mm-times">⚽ {t1_display} <span style="color:#94a3b8;">vs</span> {t2_display}</div>', unsafe_allow_html=True)
-
-                # Palpite: quem avança
-                opcoes_mm = ["— escolher —", t1_display, t2_display]
-                venc_atual = palpites_mm_venc.get(cid, "")
-                # Normaliza para opção existente
-                if venc_atual not in opcoes_mm:
-                    venc_atual = "— escolher —"
-                idx_venc = opcoes_mm.index(venc_atual)
-
-                pode_editar = autenticado and not usuario_travou_fase and (fase_liberada or fase_anterior_encerrada)
-
-                if pode_editar:
-                    novo_venc = st.radio(
-                        "Quem avança?",
-                        options=opcoes_mm,
-                        index=idx_venc,
-                        key=f"{prefixo_key}_venc_{cid}",
-                        horizontal=True,
-                        label_visibility="collapsed"
-                    )
-                    palpites_mm_venc[cid] = novo_venc if novo_venc != "— escolher —" else ""
+                # Resolve nomes reais dos times
+                if conf_def is not None:
+                    t1_d, t2_d = _resolver_times_oitava(conf_def, conf_label)
                 else:
-                    if venc_atual and venc_atual != "— escolher —":
-                        st.markdown(f"✅ **Palpite:** {venc_atual}", unsafe_allow_html=True)
-                    elif not autenticado:
-                        st.markdown("<span style='color:#94a3b8;font-size:12px;'>🔒 Login para palpitar</span>", unsafe_allow_html=True)
-                    else:
-                        st.markdown("<span style='color:#94a3b8;font-size:12px;'>Sem palpite</span>", unsafe_allow_html=True)
+                    t1_d = conf_label["t1"]
+                    t2_d = conf_label["t2"]
 
-                # Palpite de placar
-                if pode_editar:
-                    c1, c2 = st.columns(2)
-                    placar_atual = palpites_mm_placar.get(cid, [0, 0])
-                    g1 = c1.number_input(
-                        f"Gols {t1_display[:8]}",
-                        min_value=0, max_value=20,
-                        value=int(placar_atual[0]) if placar_atual else 0,
-                        step=1, key=f"{prefixo_key}_g1_{cid}"
-                    )
-                    g2 = c2.number_input(
-                        f"Gols {t2_display[:8]}",
-                        min_value=0, max_value=20,
-                        value=int(placar_atual[1]) if len(placar_atual) > 1 else 0,
-                        step=1, key=f"{prefixo_key}_g2_{cid}"
-                    )
-                    palpites_mm_placar[cid] = [g1, g2]
-                elif dados_usuario["palpites_placar_mm"].get(cid) and usuario_travou_fase:
-                    p = dados_usuario["palpites_placar_mm"][cid]
-                    if isinstance(p, list) and len(p) >= 2:
-                        st.markdown(
-                            f"<div style='font-size:12px;color:#64748b;'>Placar: {t1_display[:10]} **{p[0]}** x **{p[1]}** {t2_display[:10]}</div>",
-                            unsafe_allow_html=True
+                with cols[i % 2]:
+                    st.markdown(f'<div class="mm-card">', unsafe_allow_html=True)
+                    st.markdown(f'<div class="mm-id">{titulo_fase} — {cid}</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="mm-times">⚽ {t1_d} <span style="color:#94a3b8;">vs</span> {t2_d}</div>', unsafe_allow_html=True)
+
+                    pode_editar = (autenticado and not usuario_travou
+                                   and (fase_liberada or fase_anterior_ok))
+
+                    venc_atual = palpites_mm_venc.get(cid, "")
+                    opcoes = ["— escolher —", t1_d, t2_d]
+                    # Normaliza: venc salvo pode ser nome antigo (placeholder)
+                    idx_venc = 0
+                    for oi, op in enumerate(opcoes):
+                        if op and venc_atual and _normalizar_time(op) == _normalizar_time(venc_atual):
+                            idx_venc = oi; break
+
+                    if pode_editar:
+                        novo_venc = st.radio(
+                            "Quem avança?", options=opcoes, index=idx_venc,
+                            key=f"{prefixo}_v_{cid}", horizontal=True, label_visibility="collapsed"
                         )
+                        palpites_mm_venc[cid] = novo_venc if novo_venc != "— escolher —" else ""
 
-                # Resultado real (API ou manual)
-                if res_manual_conf:
-                    gc = res_manual_conf.get("placar_c")
-                    gf = res_manual_conf.get("placar_f")
-                    vencedor_real = res_manual_conf.get("vencedor", "")
-                    t1r = res_manual_conf.get("time_casa", conf["t1"])
-                    t2r = res_manual_conf.get("time_fora", conf["t2"])
-                    if gc is not None and gf is not None:
-                        placar_txt = f"{t1r} {gc} x {gf} {t2r}"
-                        venc_txt = f" — Avança: <strong>{vencedor_real}</strong>" if vencedor_real else ""
-                        st.markdown(
-                            f'<div class="mm-real-result">📊 Resultado: {placar_txt}{venc_txt}</div>',
-                            unsafe_allow_html=True
-                        )
+                        # Palpite de placar
+                        c1, c2 = st.columns(2)
+                        pl = palpites_mm_placar.get(cid, [0, 0])
+                        g1 = c1.number_input(f"{t1_d[:10]}", min_value=0, max_value=20,
+                                             value=int(pl[0]), step=1, key=f"{prefixo}_g1_{cid}")
+                        g2 = c2.number_input(f"{t2_d[:10]}", min_value=0, max_value=20,
+                                             value=int(pl[1]), step=1, key=f"{prefixo}_g2_{cid}")
+                        palpites_mm_placar[cid] = [g1, g2]
                     else:
-                        st.markdown('<div class="mm-real-result">⏳ Aguardando resultado</div>', unsafe_allow_html=True)
+                        # Exibe palpite salvo
+                        if venc_atual and venc_atual != "— escolher —":
+                            pl = dados_usuario["palpites_placar_mm"].get(cid, [0, 0])
+                            pl_txt = (f" ({pl[0]}×{pl[1]})" if isinstance(pl, list) and len(pl) >= 2
+                                      and usuario_travou else "")
+                            st.markdown(f"✅ **Palpite:** {venc_atual}{pl_txt}", unsafe_allow_html=True)
+                        elif not autenticado:
+                            st.markdown("<span style='color:#94a3b8;font-size:12px;'>🔒 Login para palpitar</span>", unsafe_allow_html=True)
+                        else:
+                            st.markdown("<span style='color:#94a3b8;font-size:12px;'>Sem palpite registrado</span>", unsafe_allow_html=True)
 
-                st.markdown("</div>", unsafe_allow_html=True)
-
-        # Botão de trava desta fase
-        if autenticado and not usuario_travou_fase and (fase_liberada or fase_anterior_encerrada):
-            st.write("")
-            chave_trava_fase = f"trava_fase_{prefixo_key}_{usuario_selecionado}"
-            if chave_trava_fase not in st.session_state:
-                st.session_state[chave_trava_fase] = False
-
-            if not st.session_state[chave_trava_fase]:
-                if st.button(f"🔒 Travar palpites — {nome_fase}", key=f"btn_trava_{prefixo_key}"):
-                    st.session_state[chave_trava_fase] = True
-                    st.rerun()
-            else:
-                st.markdown("""
-                <div class="cuzao-box">
-                    <p class="cuzao-title">⚠️ Travar palpites desta fase?</p>
-                    <p class="cuzao-sub">Depois não dá pra editar mais!</p>
-                </div>
-                """, unsafe_allow_html=True)
-                c_s, c_n = st.columns(2)
-                if c_s.button(f"🔥 Sim, travar {nome_fase}!", key=f"btn_sim_{prefixo_key}"):
-                    banco_atual = carregar_banco()
-                    banco_atual[usuario_selecionado]["vencedores_mata_mata"].update(palpites_mm_venc)
-                    banco_atual[usuario_selecionado]["palpites_placar_mm"].update(
-                        {k: list(v) for k, v in palpites_mm_placar.items()}
-                    )
-                    banco_atual[usuario_selecionado][campo_trava] = True
-                    ok = salvar_banco(banco_atual)
-                    if ok:
-                        st.success(f"✅ Palpites de {nome_fase} travados!")
-                        dados_usuario[campo_trava] = True
+                    # Resultado real abaixo do card
+                    resultado_r = _resultado_mm(cid, t1_d, t2_d)
+                    if resultado_r:
+                        gc_r = resultado_r.get("placar_c")
+                        gf_r = resultado_r.get("placar_f")
+                        vr   = resultado_r.get("vencedor", "")
+                        if gc_r is not None and gf_r is not None:
+                            placar_real_str = f"{t1_d} {gc_r} × {gf_r} {t2_d}"
+                            venc_badge = f" — <strong>Avança: {vr}</strong>" if vr else ""
+                            st.markdown(
+                                f'<div class="mm-real-result">📊 {placar_real_str}{venc_badge} '
+                                f'<span style="color:#94a3b8;font-size:10px;">({resultado_r.get("fonte","")})</span></div>',
+                                unsafe_allow_html=True
+                            )
+                        else:
+                            st.markdown('<div class="mm-real-result">⏳ Aguardando resultado</div>', unsafe_allow_html=True)
                     else:
-                        st.error("Falha ao salvar. Tente novamente.")
-                    st.session_state[chave_trava_fase] = False
-                    st.rerun()
-                if c_n.button("❌ Cancelar", key=f"btn_nao_{prefixo_key}"):
-                    st.session_state[chave_trava_fase] = False
-                    st.rerun()
+                        st.markdown('<div class="mm-real-result">⏳ Jogo ainda não realizado</div>', unsafe_allow_html=True)
 
-        # Botão salvar rascunho (sem travar)
-        elif autenticado and not usuario_travou_fase and (fase_liberada or fase_anterior_encerrada):
-            if st.button(f"💾 Salvar rascunho — {nome_fase}", key=f"btn_rascunho_{prefixo_key}"):
-                banco_atual = carregar_banco()
-                banco_atual[usuario_selecionado]["vencedores_mata_mata"].update(palpites_mm_venc)
-                banco_atual[usuario_selecionado]["palpites_placar_mm"].update(
-                    {k: list(v) for k, v in palpites_mm_placar.items()}
-                )
-                ok = salvar_banco(banco_atual)
-                if ok:
-                    st.success("💾 Rascunho salvo!")
+                    st.markdown("</div>", unsafe_allow_html=True)
+
+            # Botão de trava / rascunho desta fase
+            if autenticado and not usuario_travou and (fase_liberada or fase_anterior_ok):
+                st.write("")
+                chave_f = f"trava_fase_{prefixo}_{usuario_selecionado}"
+                if chave_f not in st.session_state:
+                    st.session_state[chave_f] = False
+
+                col_r, col_t = st.columns([1, 1])
+                # Salvar rascunho
+                if col_r.button(f"💾 Rascunho", key=f"rascunho_{prefixo}"):
+                    banco_at = carregar_banco()
+                    banco_at[usuario_selecionado]["vencedores_mata_mata"].update(palpites_mm_venc)
+                    banco_at[usuario_selecionado]["palpites_placar_mm"].update(
+                        {k: list(v) for k, v in palpites_mm_placar.items()})
+                    if salvar_banco(banco_at):
+                        st.success("💾 Rascunho salvo!")
+                    else:
+                        st.error("Falha ao salvar.")
+
+                # Travar fase
+                if not st.session_state[chave_f]:
+                    if col_t.button(f"🔒 Travar {nome_fase}", key=f"trava_{prefixo}"):
+                        st.session_state[chave_f] = True; st.rerun()
                 else:
-                    st.error("Falha ao salvar.")
+                    st.markdown('<div class="cuzao-box"><p class="cuzao-title">⚠️ Travar esta fase?</p>'
+                                '<p class="cuzao-sub">Não dá pra editar depois!</p></div>', unsafe_allow_html=True)
+                    cs, cn = st.columns(2)
+                    if cs.button(f"🔥 Sim, travar!", key=f"sim_{prefixo}"):
+                        banco_at = carregar_banco()
+                        banco_at[usuario_selecionado]["vencedores_mata_mata"].update(palpites_mm_venc)
+                        banco_at[usuario_selecionado]["palpites_placar_mm"].update(
+                            {k: list(v) for k, v in palpites_mm_placar.items()})
+                        banco_at[usuario_selecionado][campo_trava] = True
+                        if salvar_banco(banco_at):
+                            st.success(f"✅ {nome_fase} travado!")
+                            dados_usuario[campo_trava] = True
+                        else:
+                            st.error("Falha ao salvar.")
+                        st.session_state[chave_f] = False; st.rerun()
+                    if cn.button("❌ Cancelar", key=f"nao_{prefixo}"):
+                        st.session_state[chave_f] = False; st.rerun()
 
-        return True
+        # ======================================================================
+        # Resolve nomes reais para oitavas e monta pares
+        # ======================================================================
+        oitavas_pares = list(zip(MATA_MATA_OITAVAS_DEF, MATA_MATA_OITAVAS_LABELS))
+        quartas_pares = [(None, c) for c in MATA_MATA_QUARTAS]
+        semis_pares   = [(None, c) for c in MATA_MATA_SEMIS]
+        final_pares   = [(None, c) for c in MATA_MATA_FINAL]
 
-    # ===========================================================================
-    # RENDERIZA CADA FASE
-    # ===========================================================================
+        _render_fase_mm("Oitavas de Final", oitavas_pares,
+                        "mm_oitavas_travadas", MATA_MATA_LIBERADO, True, "oitavas")
+        _render_fase_mm("Quartas de Final", quartas_pares,
+                        "mm_quartas_travadas", QUARTAS_LIBERADAS,
+                        dados_usuario.get("mm_oitavas_travadas", False), "quartas")
+        _render_fase_mm("Semifinais", semis_pares,
+                        "mm_semis_travadas", SEMIS_LIBERADAS,
+                        dados_usuario.get("mm_quartas_travadas", False), "semis")
+        _render_fase_mm("Final e 3º Lugar", final_pares,
+                        "mm_final_travada", FINAL_LIBERADA,
+                        dados_usuario.get("mm_semis_travadas", False), "final")
 
-    # Botão de salvar rascunho global (antes das fases)
-    if autenticado and not dados_usuario.get("mm_oitavas_travadas"):
+        # ======================================================================
+        # ÁRVORE VISUAL
+        # ======================================================================
         st.markdown("---")
+        st.markdown("## 🌳 Árvore do Chaveamento")
+        st.caption("Mostra os confrontos e o progresso. 🟢 = resultado real · 🔵 = seu palpite de vencedor")
 
-    # 1. OITAVAS
-    _render_fase(
-        nome_fase="Oitavas de Final",
-        confrontos=MATA_MATA_OITAVAS,
-        campo_trava="mm_oitavas_travadas",
-        fase_liberada=MATA_MATA_LIBERADO,
-        fase_anterior_encerrada=True,  # Oitavas são a primeira fase, sempre disponível
-        prefixo_key="oitavas"
-    )
+        pv = dados_usuario["vencedores_mata_mata"]
+        res_mm_cache = {}
+        def _get_res(cid, t1, t2):
+            if cid not in res_mm_cache:
+                res_mm_cache[cid] = _resultado_mm(cid, t1, t2)
+            return res_mm_cache[cid]
 
-    # 2. QUARTAS
-    _render_fase(
-        nome_fase="Quartas de Final",
-        confrontos=MATA_MATA_QUARTAS,
-        campo_trava="mm_quartas_travadas",
-        fase_liberada=QUARTAS_LIBERADAS,
-        fase_anterior_encerrada=dados_usuario.get("mm_oitavas_travadas", False),
-        prefixo_key="quartas"
-    )
+        def _card_arvore(cid, t1, t2, label=""):
+            res = _get_res(cid, t1, t2)
+            vp  = pv.get(cid, "")
+            rv  = res.get("vencedor", "") if res else ""
+            gc  = res.get("placar_c", "") if res else ""
+            gf  = res.get("placar_f", "") if res else ""
+            t1s = (t1 or "?")[:14]
+            t2s = (t2 or "?")[:14]
+            cor1 = ("#15803d" if rv and _normalizar_time(rv) == _normalizar_time(t1)
+                    else ("#1d4ed8" if vp and _normalizar_time(vp) == _normalizar_time(t1)
+                    else "#334155"))
+            cor2 = ("#15803d" if rv and _normalizar_time(rv) == _normalizar_time(t2)
+                    else ("#1d4ed8" if vp and _normalizar_time(vp) == _normalizar_time(t2)
+                    else "#334155"))
+            placar_html = (f'<div style="font-size:11px;font-weight:800;color:#1d4ed8;text-align:center;">'
+                           f'{gc}×{gf}</div>' if gc != "" and gf != "" else "")
+            return (f'<div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:8px;'
+                    f'padding:5px 8px;margin:2px 0;min-width:120px;">'
+                    f'<div style="font-size:9px;color:#94a3b8;font-weight:700;text-align:center;'
+                    f'margin-bottom:1px;">{label or cid}</div>'
+                    f'<div style="font-size:10px;font-weight:700;color:{cor1};text-align:center;">{t1s}</div>'
+                    f'<div style="font-size:9px;color:#94a3b8;text-align:center;">vs</div>'
+                    f'<div style="font-size:10px;font-weight:700;color:{cor2};text-align:center;">{t2s}</div>'
+                    f'{placar_html}</div>')
 
-    # 3. SEMIS
-    _render_fase(
-        nome_fase="Semifinais",
-        confrontos=MATA_MATA_SEMIS,
-        campo_trava="mm_semis_travadas",
-        fase_liberada=SEMIS_LIBERADAS,
-        fase_anterior_encerrada=dados_usuario.get("mm_quartas_travadas", False),
-        prefixo_key="semis"
-    )
+        # Resolve nomes reais de oitavas para a árvore
+        def _t(conf_def, lbl):
+            if conf_def:
+                return _resolver_times_oitava(conf_def, lbl)
+            return lbl["t1"], lbl["t2"]
 
-    # 4. FINAL
-    _render_fase(
-        nome_fase="Final e Terceiro Lugar",
-        confrontos=MATA_MATA_FINAL,
-        campo_trava="mm_final_travada",
-        fase_liberada=FINAL_LIBERADA,
-        fase_anterior_encerrada=dados_usuario.get("mm_semis_travadas", False),
-        prefixo_key="final"
-    )
+        col_o1, col_o2, col_q, col_s, col_f = st.columns([2, 2, 2, 2, 2])
 
-    # ===========================================================================
-    # ÁRVORE VISUAL DO CHAVEAMENTO
-    # ===========================================================================
-    st.markdown("---")
-    st.markdown("## 🌳 Árvore do Chaveamento")
-    st.caption("Visualização dos confrontos e progressão pelo torneio")
+        oitavas_esq = list(zip(MATA_MATA_OITAVAS_DEF[:8], MATA_MATA_OITAVAS_LABELS[:8]))
+        oitavas_dir = list(zip(MATA_MATA_OITAVAS_DEF[8:], MATA_MATA_OITAVAS_LABELS[8:]))
 
-    def _nome_curto(nome, max_len=12):
-        return nome[:max_len] if len(nome) > max_len else nome
+        with col_o1:
+            st.markdown("**Oitavas ①**")
+            for cd, cl in oitavas_esq:
+                t1, t2 = _t(cd, cl)
+                st.markdown(_card_arvore(cl["id"], t1, t2), unsafe_allow_html=True)
 
-    def _card_conf(conf_id, confrontos_dict, resultados_dict, palpites_venc):
-        conf = confrontos_dict.get(conf_id, {"t1": "?", "t2": "?"})
-        t1 = conf["t1"]
-        t2 = conf["t2"]
-        venc = palpites_venc.get(conf_id, "")
-        res  = resultados_dict.get(conf_id, {})
-        real_venc = res.get("vencedor", "")
-        gc = res.get("placar_c", "")
-        gf = res.get("placar_f", "")
+        with col_o2:
+            st.markdown("**Oitavas ②**")
+            for cd, cl in oitavas_dir:
+                t1, t2 = _t(cd, cl)
+                st.markdown(_card_arvore(cl["id"], t1, t2), unsafe_allow_html=True)
 
-        # Cor baseada em resultado
-        cor_t1 = "#15803d" if real_venc and real_venc == t1 else ("#1e3a5f" if venc == t1 else "#334155")
-        cor_t2 = "#15803d" if real_venc and real_venc == t2 else ("#1e3a5f" if venc == t2 else "#334155")
+        with col_q:
+            st.markdown("**Quartas**")
+            for c in MATA_MATA_QUARTAS:
+                st.markdown(_card_arvore(c["id"], c["t1"], c["t2"]), unsafe_allow_html=True)
 
-        placar_html = ""
-        if gc != "" and gf != "":
-            placar_html = f'<div style="font-size:11px;font-weight:800;color:#1d4ed8;text-align:center;">{gc} × {gf}</div>'
+        with col_s:
+            st.markdown("**Semis**")
+            for c in MATA_MATA_SEMIS:
+                st.markdown(_card_arvore(c["id"], c["t1"], c["t2"]), unsafe_allow_html=True)
 
-        return f"""
-<div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:8px;padding:6px 8px;margin:3px 0;min-width:140px;">
-  <div style="font-size:10px;color:#94a3b8;font-weight:700;text-align:center;margin-bottom:2px;">{conf_id}</div>
-  <div style="font-size:11px;font-weight:700;color:{cor_t1};text-align:center;">{_nome_curto(t1)}</div>
-  <div style="font-size:10px;color:#94a3b8;text-align:center;">vs</div>
-  <div style="font-size:11px;font-weight:700;color:{cor_t2};text-align:center;">{_nome_curto(t2)}</div>
-  {placar_html}
-</div>"""
-
-    # Monta dicionários para a árvore
-    todos_confrontos = {c["id"]: c for c in MATA_MATA_CONFRONTOS}
-    res_manuais_mm = {}
-    for conf in MATA_MATA_CONFRONTOS:
-        chave = f"MM_{conf['id']}"
-        r = _resultados_manuais().get(chave)
-        if r:
-            res_manuais_mm[conf["id"]] = r
-
-    palpite_venc_usuario = dados_usuario["vencedores_mata_mata"]
-
-    # Renderiza a árvore em colunas (oitavas → quartas → semis → final)
-    col_o1, col_o2, col_q, col_s, col_f = st.columns([2, 2, 2, 2, 2])
-
-    with col_o1:
-        st.markdown("**Oitavas (1)**", unsafe_allow_html=True)
-        for cid in ["M1", "M3", "M5", "M7", "M9", "M11", "M13", "M15"]:
-            st.markdown(
-                _card_conf(cid, todos_confrontos, res_manuais_mm, palpite_venc_usuario),
-                unsafe_allow_html=True
-            )
-
-    with col_o2:
-        st.markdown("**Oitavas (2)**", unsafe_allow_html=True)
-        for cid in ["M2", "M4", "M6", "M8", "M10", "M12", "M14", "M16"]:
-            st.markdown(
-                _card_conf(cid, todos_confrontos, res_manuais_mm, palpite_venc_usuario),
-                unsafe_allow_html=True
-            )
-
-    with col_q:
-        st.markdown("**Quartas**", unsafe_allow_html=True)
-        for cid in ["Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Q7", "Q8"]:
-            st.markdown(
-                _card_conf(cid, todos_confrontos, res_manuais_mm, palpite_venc_usuario),
-                unsafe_allow_html=True
-            )
-
-    with col_s:
-        st.markdown("**Semis**", unsafe_allow_html=True)
-        for cid in ["S1", "S2", "S3", "S4"]:
-            st.markdown(
-                _card_conf(cid, todos_confrontos, res_manuais_mm, palpite_venc_usuario),
-                unsafe_allow_html=True
-            )
-
-    with col_f:
-        st.markdown("**Final**", unsafe_allow_html=True)
-        for cid in ["T1", "T2", "F1"]:
-            conf = todos_confrontos.get(cid, {})
-            label = conf.get("label", cid)
-            st.markdown(
-                _card_conf(cid, todos_confrontos, res_manuais_mm, palpite_venc_usuario),
-                unsafe_allow_html=True
-            )
-
-    st.caption("🟢 Verde = time que avançou (resultado real) · 🔵 Azul = seu palpite de vencedor")
+        with col_f:
+            st.markdown("**Final**")
+            for c in MATA_MATA_FINAL:
+                st.markdown(_card_arvore(c["id"], c["t1"], c["t2"], c.get("label", c["id"])),
+                            unsafe_allow_html=True)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # ABA 3: CALENDÁRIO
@@ -1774,34 +1743,22 @@ with aba_calendario:
     if filtro_sel != "Todas":
         jogos_exibir = [j for j in jogos_exibir if filtro_sel in j["jogo"]]
 
-    datas = []
-    for j in jogos_exibir:
-        if j["data"] not in datas:
-            datas.append(j["data"])
-
+    datas = list(dict.fromkeys(j["data"] for j in jogos_exibir))
     for data in datas:
         st.markdown(f'<div class="data-header">📆 {data}</div>', unsafe_allow_html=True)
-        jogos_data = [j for j in jogos_exibir if j["data"] == data]
-        for j in jogos_data:
+        for j in [x for x in jogos_exibir if x["data"] == data]:
             jogo_real = _buscar_jogo_real(j["jogo"])
             status = _status_jogo(j["data"], j["hora"])
             if jogo_real:
-                if jogo_real.get("status") == "FINISHED":
-                    status = "finalizado"
-                elif jogo_real.get("status") == "IN_PLAY":
-                    status = "aovivo"
+                if jogo_real.get("status") == "FINISHED":   status = "finalizado"
+                elif jogo_real.get("status") == "IN_PLAY":  status = "aovivo"
             nome_jogo = _formatar_placar(jogo_real) if jogo_real and _tem_placar(jogo_real) else j["jogo"]
-            fonte_resultado = ""
-            if jogo_real and _tem_placar(jogo_real):
-                fonte_resultado = f' · {jogo_real.get("fonte_resultado", api_data["fonte"])}'
+            fonte_resultado = (f' · {jogo_real.get("fonte_resultado", api_data["fonte"])}'
+                               if jogo_real and _tem_placar(jogo_real) else "")
             brasil_class = "jogo-brasil" if j["brasil"] else ""
-            if status == "finalizado":
-                badge = '<span class="badge-finalizado">✓ Finalizado</span>'
-            elif status == "aovivo":
-                badge = '<span class="badge-aovivo">🔴 Ao vivo</span>'
-            else:
-                badge = '<span class="badge-previsto">Previsto</span>'
-
+            badge = ('<span class="badge-finalizado">✓ Finalizado</span>' if status == "finalizado"
+                     else '<span class="badge-aovivo">🔴 Ao vivo</span>' if status == "aovivo"
+                     else '<span class="badge-previsto">Previsto</span>')
             st.markdown(f"""
             <div class="jogo-card {brasil_class}">
                 <div class="jogo-data">{j["data"]}</div>
@@ -1827,12 +1784,12 @@ with aba_ranking:
             <div class="regra-item">🥇 1º colocado correto no grupo: <strong>+2 pts</strong></div>
             <div class="regra-item">🥈 2º colocado correto no grupo: <strong>+2 pts</strong></div>
             <div class="regra-item">⚽ Placar exato do Brasil (fase grupos): <strong>+5 pts</strong></div>
-            <div class="regra-item">✅ Vencedor/empate correto (Brasil, fase grupos): <strong>+3 pts</strong></div>
-            <div class="regra-item" style="margin-top:8px;"><strong>Mata-Mata (Oitavas, Quartas, Semis, Final)</strong></div>
-            <div class="regra-item">⚽ Placar exato em qualquer jogo do mata-mata: <strong>+5 pts</strong></div>
-            <div class="regra-item">✅ Acertar o vencedor/quem avança: <strong>+3 pts</strong></div>
-            <div class="regra-item">❌ Errar o vencedor: <strong>+0 pts</strong></div>
-            <div class="regra-item" style="margin-top:8px;">🔒 Palpite não travado: <strong>0 pts</strong> (até travar)</div>
+            <div class="regra-item">✅ Resultado correto (Brasil, fase grupos): <strong>+3 pts</strong></div>
+            <div class="regra-item" style="margin-top:8px;"><strong>Mata-Mata (todas as fases)</strong></div>
+            <div class="regra-item">⚽ Placar exato: <strong>+5 pts</strong></div>
+            <div class="regra-item">✅ Acertar quem avança: <strong>+3 pts</strong></div>
+            <div class="regra-item">❌ Errar: <strong>0 pts</strong></div>
+            <div class="regra-item" style="margin-top:8px;">🔒 Palpite não travado: <strong>0 pts</strong></div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -1840,56 +1797,39 @@ with aba_ranking:
     qualquer_jogo_realizado = any(j.get("status") == "FINISHED" for j in api_data.get("jogos_reais", []))
 
     for amigo in AMIGOS:
-        user   = st.session_state.banco[amigo]
+        user  = st.session_state.banco[amigo]
         total, detalhes = _calcular_pontuacao(amigo)
         travado = user["travado"]
-
         badges = []
         if travado:
             acertou_placar = any(
-                user["placar_brasil"][i * 2]     == api_data["gols_brasil"][i * 2] and
-                user["placar_brasil"][i * 2 + 1] == api_data["gols_brasil"][i * 2 + 1] and
-                api_data["gols_brasil"][i * 2] is not None
+                user["placar_brasil"][i*2] == api_data["gols_brasil"][i*2] and
+                user["placar_brasil"][i*2+1] == api_data["gols_brasil"][i*2+1] and
+                api_data["gols_brasil"][i*2] is not None
                 for i in range(3)
             )
-            errou_tudo = qualquer_jogo_realizado and total == 0
-
-            if acertou_placar:
-                badges.append("🔮 Profeta")
-            if errou_tudo:
-                badges.append("🤡 Zica")
-
-        linhas.append({
-            "amigo":    amigo,
-            "total":    total,
-            "travado":  travado,
-            "badges":   badges,
-            "detalhes": detalhes,
-        })
+            if acertou_placar: badges.append("🔮 Profeta")
+            if qualquer_jogo_realizado and total == 0: badges.append("🤡 Zica")
+        linhas.append({"amigo": amigo, "total": total, "travado": travado,
+                        "badges": badges, "detalhes": detalhes})
 
     linhas.sort(key=lambda x: (-int(x["travado"]), -x["total"]))
+    travados_com_pts = [l for l in linhas if l["travado"] and l["total"] > 0]
+    if travados_com_pts:
+        linhas[0]["badges"].insert(0, "👑 Líder")
+        if len(travados_com_pts) > 1:
+            linhas[-1]["badges"].append("🔦 Lanterna")
 
-    if len(linhas) > 0:
-        travados_com_pts = [l for l in linhas if l["travado"] and l["total"] > 0]
-        if travados_com_pts:
-            linhas[0]["badges"].insert(0, "👑 Líder")
-            if len(travados_com_pts) > 1:
-                linhas[-1]["badges"].append("🔦 Lanterna")
-
-    posicao_icons = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣", "6️⃣"]
-
+    pos_icons = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣", "6️⃣"]
     for i, linha in enumerate(linhas):
-        cor_borda = ""
-        if i == 0 and linha["total"] > 0:
-            cor_borda = "border: 2px solid #1d4ed8;"
-
-        badge_str  = " | ".join(linha["badges"]) if linha["badges"] else ("⏳ Aguardando início" if not qualquer_jogo_realizado else "🏃 Em jogo")
+        cor_borda = "border: 2px solid #1d4ed8;" if i == 0 and linha["total"] > 0 else ""
+        badge_str = " | ".join(linha["badges"]) if linha["badges"] else (
+            "⏳ Aguardando início" if not qualquer_jogo_realizado else "🏃 Em jogo")
         status_str = "🔒 Travado" if linha["travado"] else "🔓 Editando"
         pts_color  = "#1e3a5f" if linha["total"] > 0 else "#94a3b8"
-
         st.markdown(f"""
         <div class="rank-row" style="{cor_borda}">
-            <div class="rank-pos">{posicao_icons[i]}</div>
+            <div class="rank-pos">{pos_icons[i]}</div>
             <div style="flex:1">
                 <div class="rank-nome">{linha["amigo"]}</div>
                 <div class="rank-badges">{badge_str}</div>
@@ -1903,24 +1843,20 @@ with aba_ranking:
         """, unsafe_allow_html=True)
 
     if not qualquer_jogo_realizado:
-        st.info("⏳ A pontuação começa a ser calculada após o primeiro jogo da Copa.")
+        st.info("⏳ A pontuação começa após o primeiro jogo da Copa.")
 
     st.markdown("---")
     st.markdown("### Detalhamento por amigo")
     for linha in linhas:
         if linha["travado"] and linha["detalhes"]:
             with st.expander(f"{linha['amigo']} — {linha['total']} pts"):
-                for detalhe in linha["detalhes"]:
-                    status = detalhe.get("status", "wait")
-                    if status == "ok":
-                        icon, cls = "✅", "detail-ok"
-                    elif status == "err":
-                        icon, cls = "❌", "detail-err"
-                    else:
-                        icon, cls = "⏳", "detail-wait"
+                for det in linha["detalhes"]:
+                    st_ = det.get("status", "wait")
+                    icon = "✅" if st_ == "ok" else ("❌" if st_ == "err" else "⏳")
+                    cls  = "detail-ok" if st_ == "ok" else ("detail-err" if st_ == "err" else "detail-wait")
                     st.markdown(
-                        f'{icon} <strong>{detalhe["cat"]}</strong> — {detalhe["texto"]} '
-                        f'<span class="{cls}">+{detalhe["pts"]} pts</span>',
+                        f'{icon} <strong>{det["cat"]}</strong> — {det["texto"]} '
+                        f'<span class="{cls}">+{det["pts"]} pts</span>',
                         unsafe_allow_html=True
                     )
         elif not linha["travado"]:
