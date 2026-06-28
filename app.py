@@ -234,6 +234,7 @@ JOGOS_BRASIL = [
 # ==============================================================================
 # MATA-MATA — estrutura por fase com placeholders que viram nomes reais
 # ==============================================================================
+'''
 MATA_MATA_16AVOS_REAL = [
     # id, time1, time2, data, hora, local
     {"id": "R1",  "t1": "África do Sul",      "t2": "Canadá",            "data": "28/06", "hora": "16h00", "local": "Los Angeles"},
@@ -361,7 +362,7 @@ MATA_MATA_CONFRONTOS = (
     [{"id": l["id"], "t1": l["t1"], "t2": l["t2"]} for l in MATA_MATA_OITAVAS_LABELS]
     + MATA_MATA_QUARTAS + MATA_MATA_SEMIS + MATA_MATA_FINAL
 )
-'''
+
 # Controles de fase (altere aqui para abrir fases conforme avança o torneio)
 MATA_MATA_LIBERADO  = True   # Oitavas abertas para palpite
 QUARTAS_LIBERADAS   = False  # Abre após todos os jogos de oitavas
