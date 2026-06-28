@@ -234,7 +234,63 @@ JOGOS_BRASIL = [
 # ==============================================================================
 # MATA-MATA — estrutura por fase com placeholders que viram nomes reais
 # ==============================================================================
+MATA_MATA_16AVOS_REAL = [
+    # id, time1, time2, data, hora, local
+    {"id": "R1",  "t1": "África do Sul",      "t2": "Canadá",            "data": "28/06", "hora": "16h00", "local": "Los Angeles"},
+    {"id": "R2",  "t1": "Brasil",              "t2": "Japão",             "data": "29/06", "hora": "14h00", "local": "Houston"},
+    {"id": "R3",  "t1": "Alemanha",            "t2": "Paraguai",          "data": "29/06", "hora": "17h30", "local": "Boston"},
+    {"id": "R4",  "t1": "Países Baixos",       "t2": "Marrocos",          "data": "29/06", "hora": "22h00", "local": "Monterrey"},
+    {"id": "R5",  "t1": "Costa do Marfim",     "t2": "Noruega",           "data": "30/06", "hora": "14h00", "local": "Dallas"},
+    {"id": "R6",  "t1": "França",              "t2": "Suécia",            "data": "30/06", "hora": "18h00", "local": "Nova Jersey"},
+    {"id": "R7",  "t1": "México",              "t2": "Equador",           "data": "30/06", "hora": "22h00", "local": "Cidade do México"},
+    {"id": "R8",  "t1": "Inglaterra",          "t2": "RD Congo",          "data": "01/07", "hora": "13h00", "local": "Atlanta"},
+    {"id": "R9",  "t1": "Bélgica",             "t2": "Senegal",           "data": "01/07", "hora": "17h00", "local": "Seattle"},
+    {"id": "R10", "t1": "Estados Unidos",      "t2": "Bósnia e Herzegovina", "data": "01/07", "hora": "21h00", "local": "Santa Clara"},
+    {"id": "R11", "t1": "Espanha",             "t2": "Áustria",           "data": "02/07", "hora": "16h00", "local": "Los Angeles"},
+    {"id": "R12", "t1": "Croácia",             "t2": "Portugal",          "data": "02/07", "hora": "20h00", "local": "Toronto"},
+    {"id": "R13", "t1": "Suíça",               "t2": "Argélia",           "data": "03/07", "hora": "00h00", "local": "Vancouver"},
+    {"id": "R14", "t1": "Austrália",           "t2": "Egito",             "data": "03/07", "hora": "15h00", "local": "Dallas"},
+    {"id": "R15", "t1": "Argentina",           "t2": "Cabo Verde",        "data": "03/07", "hora": "19h00", "local": "Miami"},
+    {"id": "R16", "t1": "Colômbia",            "t2": "Gana",              "data": "03/07", "hora": "22h30", "local": "Kansas City"},
+]
 
+# Oitavas: vencedores de pares de R1-R16
+# R1 vs R2 → Q1
+# R3 vs R4 → Q2
+# R5 vs R6 → Q3
+# R7 vs R8 → Q4
+# R9 vs R10 → Q5
+# R11 vs R12 → Q6
+# R13 vs R14 → Q7
+# R15 vs R16 → Q8
+MATA_MATA_OITAVAS_REAL = [
+    {"id": "O1", "t1": "Venc. R1", "t2": "Venc. R2"},  # AFS/CAN vs BRA/JPN
+    {"id": "O2", "t1": "Venc. R3", "t2": "Venc. R4"},  # ALE/PAR vs HOL/MAR
+    {"id": "O3", "t1": "Venc. R5", "t2": "Venc. R6"},  # CIV/NOR vs FRA/SUE
+    {"id": "O4", "t1": "Venc. R7", "t2": "Venc. R8"},  # MEX/EQU vs ING/RDC
+    {"id": "O5", "t1": "Venc. R9", "t2": "Venc. R10"}, # BEL/SEN vs EUA/BOS
+    {"id": "O6", "t1": "Venc. R11","t2": "Venc. R12"}, # ESP/AUS vs CRO/POR
+    {"id": "O7", "t1": "Venc. R13","t2": "Venc. R14"}, # SUI/ALG vs AUS/EGI
+    {"id": "O8", "t1": "Venc. R15","t2": "Venc. R16"}, # ARG/CAB vs COL/GAN
+]
+
+MATA_MATA_QUARTAS_REAL = [
+    {"id": "Q1", "t1": "Venc. O1", "t2": "Venc. O2"},
+    {"id": "Q2", "t1": "Venc. O3", "t2": "Venc. O4"},
+    {"id": "Q3", "t1": "Venc. O5", "t2": "Venc. O6"},
+    {"id": "Q4", "t1": "Venc. O7", "t2": "Venc. O8"},
+]
+
+MATA_MATA_SEMIS_REAL = [
+    {"id": "S1", "t1": "Venc. Q1", "t2": "Venc. Q2"},
+    {"id": "S2", "t1": "Venc. Q3", "t2": "Venc. Q4"},
+]
+
+MATA_MATA_FINAL_REAL = [
+    {"id": "T1", "t1": "Perd. S1", "t2": "Perd. S2", "label": "🥉 3º Lugar"},
+    {"id": "F1", "t1": "Venc. S1", "t2": "Venc. S2", "label": "🏆 FINAL"},
+]
+'''
 # Chaveamento fixo das oitavas (posições dos grupos)
 # Quando a classificação final de grupos estiver disponível, os nomes reais
 # serão resolvidos automaticamente via _resolver_nome_mm()
@@ -305,7 +361,7 @@ MATA_MATA_CONFRONTOS = (
     [{"id": l["id"], "t1": l["t1"], "t2": l["t2"]} for l in MATA_MATA_OITAVAS_LABELS]
     + MATA_MATA_QUARTAS + MATA_MATA_SEMIS + MATA_MATA_FINAL
 )
-
+'''
 # Controles de fase (altere aqui para abrir fases conforme avança o torneio)
 MATA_MATA_LIBERADO  = True   # Oitavas abertas para palpite
 QUARTAS_LIBERADAS   = False  # Abre após todos os jogos de oitavas
